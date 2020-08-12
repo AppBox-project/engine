@@ -16,6 +16,9 @@ const calculate = async (context: AutomationContextType) => {
   if (context.trigger === "change") {
     systemLog("Formula recalculation triggered by change.");
     parseFormula(context.id, context.object, context.model, context.models);
+  } else if (context.trigger === "foreignChange") {
+    systemLog("Foreign change occured");
+    console.log(context.id.id);
   } else {
     // Time trigger
     systemLog("Formula recalculation triggered by time.");

@@ -110,7 +110,9 @@ db.once("open", async function () {
             key: object.objectId,
           });
           automation.action({
-            trigger: "change",
+            trigger: automationId.originalDependency
+              ? "foreignChange"
+              : "change",
             object,
             model,
             models,
@@ -178,7 +180,7 @@ const rebuildAutomations = async () => {
               .replace(")", "")
               .trim()
               .split(/[ -]/)
-              .map((variable) => {
+              .map(async (variable) => {
                 const dependency = variable.trim();
                 if (dependency.length > 0) {
                   switch (dependency) {
@@ -186,10 +188,47 @@ const rebuildAutomations = async () => {
                       hasDayTrigger = true;
                       break;
                     default:
-                      dependencies.push({
-                        model: model.key,
-                        field: dependency,
-                      });
+                      if (dependency.match("\\.")) {
+                        // This is a foreign dependency.
+                        // --> Loop through all the parts (split by .) and mark every field as a dependency
+                        await dependency
+                          .split(".")
+                          .reduce(async (promise, currentPart) => {
+                            const lastModel = await promise;
+
+                            let fieldId;
+                            if (currentPart.match("_r")) {
+                              fieldId = currentPart.replace("_r", "");
+                            } else {
+                              fieldId = currentPart;
+                            }
+
+                            dependencies.push({
+                              model: lastModel ? lastModel.key : model.key,
+                              field: fieldId,
+                            });
+
+                            // Return current model for the next step
+                            return await models.objects.model.findOne({
+                              key: fieldId,
+                            });
+                          }, undefined);
+
+                        // We have to do this here because of the asynchronous nature of database requests
+                        if (dependencies.length > 0) {
+                          changeTriggers.push({
+                            id: formulaId,
+                            dependencies: dependencies,
+                            originalDependency: dependency,
+                          });
+                        }
+                      } else {
+                        // This is a local dependency
+                        dependencies.push({
+                          model: model.key,
+                          field: dependency,
+                        });
+                      }
                       break;
                   }
                 }
