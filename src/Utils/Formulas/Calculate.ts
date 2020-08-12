@@ -1,11 +1,18 @@
 import { systemLog } from "../General";
 import { AutomationContextType } from "../Types";
 var nunjucks = require("nunjucks");
+import { format, formatDistance, formatRelative, subDays } from "date-fns";
 
-nunjucks.configure({ autoescape: true });
+let env = nunjucks.configure();
+env.addFilter("date", (date, dateFormat) => {
+  return format(date, dateFormat);
+});
+env.addFilter("years", (time) => {
+  return time / 31536000000;
+});
 
 // Recalculate a formula
-const calculate = (context: AutomationContextType) => {
+const calculate = async (context: AutomationContextType) => {
   if (context.trigger === "change") {
     systemLog("Formula recalculation triggered by change.");
     const fieldId = context.id.id.split(".")[2];
@@ -27,12 +34,24 @@ const calculate = (context: AutomationContextType) => {
       data[dep.field] = newVal;
     });
 
-    var parsedFormula = nunjucks.renderString(
+    var parsedFormula = env.renderString(
       field.typeArgs?.formula || "Error: formula missing",
       data
     );
+    switch (field.typeArgs.type) {
+      case "number":
+        parsedFormula = parseInt(parsedFormula);
+        break;
+      default:
+        break;
+    }
 
-    console.log(parsedFormula, data);
+    const model = await context.models.entries.model.findOne({
+      _id: context.object._id,
+    });
+    model.data[fieldId] = parsedFormula;
+    model.markModified("data");
+    model.save();
   } else {
     // Time trigger
     systemLog("Formula recalculation triggered by time.");

@@ -25,5 +25,6 @@
     "watch-node": "nodemon dist/engine.js",
     "start": "concurrently -k -p \"[{name}]\" -n \"TypeScript, Node\" -c \"yello.bold, cyan.bold\"  \"yarn run watch-ts\" \"yarn run watch-node\"",
     "test": "mocha -r ts-node/register src/**/*.spec.ts"
-  }
+  },
+  "devDependencies": {}
 }

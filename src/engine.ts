@@ -1,6 +1,6 @@
 import scriptAutomations from "./Automations";
 import { systemLog } from "./Utils/General";
-import { map, find } from "lodash";
+import { map, find, replace } from "lodash";
 import { AutomationType } from "./Utils/Types";
 import automation from "./Automations/sample-time-automation";
 import Automator from "./Utils/AutomationHelper";
@@ -113,6 +113,7 @@ db.once("open", async function () {
             trigger: "change",
             object,
             model,
+            models,
             change: dbChange,
             id: automationId,
           });
@@ -147,6 +148,62 @@ const rebuildAutomations = async () => {
   scriptAutomations.map((automation) => {
     automations[automation.id] = automation;
     addTrigger(automation);
+  });
+
+  // Find and compile formulas
+  // -> Loop through all models and their fields
+  // --> Find fields that are formulas
+  // --> Read their dependency. Set change dependencies for fields, time dependencies for time constants
+  systemLog("Compiling formulas...");
+  const modelList = await models.objects.model.find({});
+  modelList.map((model) => {
+    map(model.fields, (field, fieldKey) => {
+      if (field.type === "formula") {
+        // Compile formula
+        // Extract dependencies
+        const formula = field.typeArgs.formula;
+        const dependencies = [];
+        const formulaId = `f.${model.key}.${fieldKey}`;
+        automations[formulaId] = new Automator(formulaId).perform((context) => {
+          calculate(context);
+        });
+
+        formula.split("{{").map((part) => {
+          if (part.length > 2) {
+            part
+              .split("}}")[0]
+              .split("|")[0]
+              .replace("(", "")
+              .replace(")", "")
+              .trim()
+              .split(/[ -]/)
+              .map((variable) => {
+                const dependency = variable.trim();
+                if (dependency.length > 0) {
+                  switch (dependency) {
+                    case "TODAY":
+                      dayTriggers.push(formulaId);
+                      break;
+                    default:
+                      dependencies.push({
+                        model: model.key,
+                        field: dependency,
+                      });
+                      break;
+                  }
+                }
+              });
+          }
+        });
+        // If >0 dependencies, we need a change trigger
+        if (dependencies.length > 0) {
+          changeTriggers.push({
+            id: formulaId,
+            dependencies: dependencies,
+          });
+        }
+      }
+    });
   });
 
   // Cancel all previously set cronjobs (make sure no cron is planned without being neccessary)
@@ -257,59 +314,6 @@ const rebuildAutomations = async () => {
       });
     });
   }
-
-  // Find and compile formulas
-  // -> Loop through all models and their fields
-  // --> Find fields that are formulas
-  // --> Read their dependency. Set change dependencies for fields, time dependencies for time constants
-  systemLog("Compiling formulas...");
-  const modelList = await models.objects.model.find({});
-  modelList.map((model) => {
-    map(model.fields, (field, fieldKey) => {
-      if (field.type === "formula") {
-        // Compile formula
-        // Extract dependencies
-        const formula = field.typeArgs.formula;
-        const dependencies = [];
-        const formulaId = `f.${model.key}.${fieldKey}`;
-        automations[formulaId] = new Automator(formulaId).perform((context) => {
-          calculate(context);
-        });
-
-        formula.split("{{").map((part) => {
-          if (part.length > 2) {
-            part
-              .split("}}")[0]
-              .trim()
-              .split(/[ -]/)
-              .map((variable) => {
-                const dependency = variable.trim();
-                if (dependency.length > 0) {
-                  switch (dependency) {
-                    case "TODAY":
-                      dayTriggers.push(formulaId);
-                      break;
-                    default:
-                      dependencies.push({
-                        model: model.key,
-                        field: dependency,
-                      });
-                      break;
-                  }
-                }
-              });
-          }
-        });
-        // If >0 dependencies, we need a change trigger
-        if (dependencies.length > 0) {
-          changeTriggers.push({
-            id: formulaId,
-            dependencies: dependencies,
-          });
-        }
-      }
-    });
-  });
 };
 
 const addTrigger = (automation) => {
