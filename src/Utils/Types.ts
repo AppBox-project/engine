@@ -73,7 +73,7 @@ export interface AutomationContextType {
   object?: ObjectType;
   model?: ModelType;
   change?;
-  models?;
+  models;
   id;
 }
 

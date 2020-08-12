@@ -163,6 +163,7 @@ const rebuildAutomations = async () => {
         // Extract dependencies
         const formula = field.typeArgs.formula;
         const dependencies = [];
+        let hasDayTrigger = false;
         const formulaId = `f.${model.key}.${fieldKey}`;
         automations[formulaId] = new Automator(formulaId).perform((context) => {
           calculate(context);
@@ -182,7 +183,7 @@ const rebuildAutomations = async () => {
                 if (dependency.length > 0) {
                   switch (dependency) {
                     case "TODAY":
-                      dayTriggers.push(formulaId);
+                      hasDayTrigger = true;
                       break;
                     default:
                       dependencies.push({
@@ -198,6 +199,12 @@ const rebuildAutomations = async () => {
         // If >0 dependencies, we need a change trigger
         if (dependencies.length > 0) {
           changeTriggers.push({
+            id: formulaId,
+            dependencies: dependencies,
+          });
+        }
+        if (hasDayTrigger) {
+          dayTriggers.push({
             id: formulaId,
             dependencies: dependencies,
           });
@@ -225,7 +232,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "second", id: automationId });
+        automation.action({ trigger: "second", id: automationId, models });
       });
     });
   }
@@ -237,9 +244,11 @@ const rebuildAutomations = async () => {
       minuteTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) => {
+            return o.id === automationId || o.id === automationId.id;
+          }
         );
-        automation.action({ trigger: "minute", id: automationId });
+        automation.action({ trigger: "minute", id: automationId, models });
       });
     });
   }
@@ -253,7 +262,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "hour", id: automationId });
+        automation.action({ trigger: "hour", id: automationId, models });
       });
     });
   }
@@ -268,7 +277,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "day", id: automationId });
+        automation.action({ trigger: "day", id: automationId, models });
       });
     });
   }
@@ -282,7 +291,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "week", id: automationId });
+        automation.action({ trigger: "week", id: automationId, models });
       });
     });
   }
@@ -296,7 +305,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "month", id: automationId });
+        automation.action({ trigger: "month", id: automationId, models });
       });
     });
   }
@@ -310,7 +319,7 @@ const rebuildAutomations = async () => {
           automations,
           (o: AutomationType) => o.id === automationId
         );
-        automation.action({ trigger: "year", id: automationId });
+        automation.action({ trigger: "year", id: automationId, models });
       });
     });
   }
