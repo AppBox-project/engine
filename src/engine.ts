@@ -80,7 +80,7 @@ db.once("open", async function () {
     changeTriggers.map(async (automationId) => {
       const automation: AutomationType = find(
         automations,
-        (o: AutomationType) => o.id === automationId.id
+        (o: AutomationType) => o.id === automationId || o.id === automationId.id
       );
       // If this change hits a dependency, execute the automation
       if (dbChange.operationType === "update") {
@@ -269,7 +269,8 @@ const rebuildAutomations = async () => {
       secondTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "second", id: automationId, models });
       });
@@ -283,9 +284,8 @@ const rebuildAutomations = async () => {
       minuteTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => {
-            return o.id === automationId || o.id === automationId.id;
-          }
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "minute", id: automationId, models });
       });
@@ -299,7 +299,8 @@ const rebuildAutomations = async () => {
       hourTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "hour", id: automationId, models });
       });
@@ -314,7 +315,8 @@ const rebuildAutomations = async () => {
       dayTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "day", id: automationId, models });
       });
@@ -328,7 +330,8 @@ const rebuildAutomations = async () => {
       weekTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "week", id: automationId, models });
       });
@@ -342,7 +345,8 @@ const rebuildAutomations = async () => {
       monthTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "month", id: automationId, models });
       });
@@ -356,7 +360,8 @@ const rebuildAutomations = async () => {
       yearTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
-          (o: AutomationType) => o.id === automationId
+          (o: AutomationType) =>
+            o.id === automationId || o.id === automationId.id
         );
         automation.action({ trigger: "year", id: automationId, models });
       });
