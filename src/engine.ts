@@ -2,7 +2,6 @@ import scriptAutomations from "./Automations";
 import { systemLog } from "./Utils/General";
 import { map, find, replace } from "lodash";
 import { AutomationType } from "./Utils/Types";
-import automation from "./Automations/sample-time-automation";
 import Automator from "./Utils/AutomationHelper";
 import calculate from "./Utils/Formulas/Calculate";
 var cron = require("node-cron");
@@ -82,6 +81,7 @@ db.once("open", async function () {
         automations,
         (o: AutomationType) => o.id === automationId || o.id === automationId.id
       );
+
       // If this change hits a dependency, execute the automation
       if (dbChange.operationType === "update") {
         const object = await models.entries.model.findOne({
@@ -94,9 +94,10 @@ db.once("open", async function () {
           if (object.objectId === dep.model) {
             // An object of the right model was updated
             map(
-              dbChange.updateDescription.updatedFields.data,
+              dbChange.updateDescription.updatedFields.data ||
+                dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
               (newValue, fieldKey) => {
-                if (fieldKey === dep.field) {
+                if (fieldKey.replace("data.", "") === dep.field) {
                   // We also updated the right field
                   changeIsDependency = true;
                 }

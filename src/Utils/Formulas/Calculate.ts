@@ -31,27 +31,7 @@ const calculate = async (context: AutomationContextType) => {
     const fieldId = context.id.id.split(".")[2];
 
     // Todo: how to deal with a formula with multiple dependencies of which one foreign?
-    // --> 1. Obtain all models that will be relevant for formula parsing
-    // Do this once, so we don't have to do it per object. It will always be the same.
-    const formulaModels = {};
-    await context.id.originalDependency
-      .split(".")
-      .reduce(async (promise, dependencyPart) => {
-        const model = await promise;
-
-        formulaModels[model.key] = model;
-
-        let modelId;
-        if (dependencyPart.match("_r")) {
-          modelId =
-            model.fields[dependencyPart.replace("_r", "")].typeArgs
-              .relationshipTo;
-        }
-
-        return await context.models.objects.model.findOne({ key: modelId });
-      }, await context.models.objects.model.findOne({ key: modelId }));
-
-    // --> 2. (needs improvement) loop through all objects and recalculate their formulas.
+    // --> (needs improvement) loop through all objects and recalculate their formulas.
     context.models.entries.model.find({ objectId: modelId }).then((objects) => {
       objects.map(async (object) => {
         // For every object, split the formula
