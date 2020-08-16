@@ -40,7 +40,8 @@ const calculate = async (context: AutomationContextType) => {
           .reduce(async (promise, dependencyPart) => {
             const object = await promise;
 
-            let objectId;
+            if (!object) return;
+
             if (dependencyPart.match("_r")) {
               return await context.models.entries.model.findOne({
                 _id: object.data[dependencyPart.replace("_r", "")],
@@ -68,6 +69,16 @@ const calculate = async (context: AutomationContextType) => {
           model?.fields[fieldId]?.typeArgs?.formula || "Error: formula missing",
           data
         );
+        switch (model.fields[fieldId].typeArgs.type) {
+          case "number":
+            parsedFormula = parseInt(parsedFormula);
+            break;
+          case "boolean":
+            parsedFormula = parsedFormula === "true";
+            break;
+          default:
+            break;
+        }
 
         newObject.data[fieldId] = parsedFormula;
         newObject.markModified(`data.${fieldId}`);
@@ -113,6 +124,9 @@ const parseFormula = async (id, object, model, models) => {
   switch (field.typeArgs.type) {
     case "number":
       parsedFormula = parseInt(parsedFormula);
+      break;
+    case "boolean":
+      parsedFormula = parsedFormula === "true";
       break;
     default:
       break;
