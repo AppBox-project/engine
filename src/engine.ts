@@ -171,18 +171,40 @@ const rebuildAutomations = async () => {
   yearTriggers = [];
   changeTriggers = [];
 
-  // Todo: parse scripts
-  // Read files from /Automations folder
+  // Source 1: Read files from /Automations folder
   scriptAutomations.map((automation) => {
+    systemLog(
+      `Bootup -> Registering automation from included files: '${automation.id}'`
+    );
     automations[automation.id] = automation;
     addTrigger(automation);
   });
+
+  // Source 2: Read from database
+  models.entries.model
+    .find({ objectId: "automations", "data.active": true })
+    .then((dbAutomations) => {
+      dbAutomations.map((dbAutomation) => {
+        systemLog(
+          `Bootup -> Registering automation from database: '${dbAutomation.data.name}' (${dbAutomation.data.key})`
+        );
+        const automation = new Automator(dbAutomation.data.key);
+        dbAutomation.data.triggers.map((trigger) => {
+          automation.every(trigger.trigger);
+        });
+        dbAutomation.data.actions.map((action) => {
+          automation.runsAction({ ...action, arguments: action.args });
+        });
+
+        addTrigger(automation);
+      });
+    });
 
   // Find and compile formulas
   // -> Loop through all models and their fields
   // --> Find fields that are formulas
   // --> Read their dependency. Set change dependencies for fields, time dependencies for time constants
-  systemLog("Compiling formulas...");
+  systemLog("Bootup -> Compiling formulas...");
   const modelList = await models.objects.model.find({});
   modelList.map((model) => {
     map(model.fields, (field, fieldKey) => {
@@ -415,7 +437,6 @@ const rebuildAutomations = async () => {
 };
 
 const addTrigger = (automation) => {
-  systemLog(`Registering trigger ${automation.id}`);
   automations[automation.id] = automation;
   map(automation.triggers, (trigger) => {
     switch (trigger) {
