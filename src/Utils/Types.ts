@@ -80,14 +80,10 @@ export interface AutomationContextType {
 export interface AutomationType {
   id: string;
   action: (context: AutomationContextType) => void;
-  changeFilter: ChangeFilterType;
+  simpleActions: SimpleAction[];
 }
 
-export type ChangeFilterType = (
-  models,
-  changeType: "update",
-  documentKey: string,
-  updated,
-  object,
-  model
-) => { response: boolean; reason?: string };
+export interface SimpleAction {
+  type: "InsertObject" | "UpdateCurrentObject";
+  arguments: {};
+}

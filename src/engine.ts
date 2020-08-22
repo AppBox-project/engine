@@ -4,6 +4,8 @@ import { map, find, replace } from "lodash";
 import { AutomationType } from "./Utils/Types";
 import Automator from "./Utils/AutomationHelper";
 import calculate from "./Utils/Formulas/Calculate";
+import { InsertObject } from "./Automations/Actions/InsertObject";
+import { UpdateCurrentObject } from "./Automations/Actions/UpdateCurrentObject";
 var cron = require("node-cron");
 
 //@ts-ignore
@@ -19,7 +21,7 @@ require("./Utils/Models/AppPermissions");
 //@ts-ignore
 require("./Utils/Models/UserSettings");
 
-systemLog("Kickstarting engine.");
+systemLog("Kickstarting engine..");
 
 // Variables
 let automations = {};
@@ -30,6 +32,7 @@ let dayTriggers = [];
 let weekTriggers = [];
 let monthTriggers = [];
 let yearTriggers = [];
+let customTimeTriggers = [];
 let changeTriggers = [];
 let cronJobs = {};
 let models;
@@ -37,7 +40,7 @@ let models;
 // Connect to mongo (required for engine to run)
 mongoose.connect(
   `mongodb://${
-    process.env.dbUrl ? process.env.dbUrl : "192.168.0.2:27017"
+    process.env.DBURL ? process.env.DBURL : "192.168.0.2:27017"
   }/AppBox`,
   {
     useNewUrlParser: true,
@@ -75,6 +78,7 @@ db.once("open", async function () {
 
   // Change streams
   // Todo: react appropriately to model changes
+  // --> Such as:
   models.entries.stream.on("change", (dbChange) => {
     changeTriggers.map(async (automationId) => {
       const automation: AutomationType = find(
@@ -93,30 +97,50 @@ db.once("open", async function () {
         automationId.dependencies.map((dep) => {
           if (object.objectId === dep.model) {
             // An object of the right model was updated
-            map(
-              dbChange.updateDescription.updatedFields.data ||
-                dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
-              (newValue, fieldKey) => {
-                if (fieldKey.replace("data.", "") === dep.field) {
-                  // We also updated the right field
-                  changeIsDependency = true;
-                }
+            if (dep.field === "_ANY_") {
+              if (!dep.fieldNot) {
+                // Any field is okay
+                changeIsDependency = true;
+              } else {
+                // Any field except
+                map(
+                  dbChange.updateDescription.updatedFields.data ||
+                    dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                  (newValue, fieldKey) => {
+                    if (fieldKey.replace("data.", "") !== dep.fieldNot) {
+                      // We also updated the right field
+                      changeIsDependency = true;
+                    }
+                  }
+                );
               }
-            );
+            } else {
+              map(
+                dbChange.updateDescription.updatedFields.data ||
+                  dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                (newValue, fieldKey) => {
+                  if (fieldKey.replace("data.", "") === dep.field) {
+                    // We also updated the right field
+                    changeIsDependency = true;
+                  }
+                }
+              );
+            }
           }
         });
 
+        // If we changed a field that is a dependency
         if (changeIsDependency) {
           const model = await models.objects.model.findOne({
             key: object.objectId,
           });
-          automation.action({
+
+          executeAutomation(automation, {
             trigger: automationId.originalDependency
               ? "foreignChange"
               : "change",
             object,
             model,
-            models,
             change: dbChange,
             id: automationId,
           });
@@ -168,9 +192,11 @@ const rebuildAutomations = async () => {
         const dependencies = [];
         let hasDayTrigger = false;
         const formulaId = `f.${model.key}.${fieldKey}`;
-        automations[formulaId] = new Automator(formulaId).perform((context) => {
-          calculate(context);
-        });
+        automations[formulaId] = new Automator(formulaId).performs(
+          (context) => {
+            calculate(context);
+          }
+        );
 
         formula.split("{{").map((part) => {
           if (part.length > 2) {
@@ -273,7 +299,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "second", id: automationId, models });
+        executeAutomation(automation, { trigger: "second" });
       });
     });
   }
@@ -288,7 +314,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "minute", id: automationId, models });
+        executeAutomation(automation, { trigger: "minute" });
       });
     });
   }
@@ -303,7 +329,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "hour", id: automationId, models });
+        executeAutomation(automation, { trigger: "hour" });
       });
     });
   }
@@ -319,7 +345,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "day", id: automationId, models });
+        executeAutomation(automation, { trigger: "day" });
       });
     });
   }
@@ -334,7 +360,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "week", id: automationId, models });
+        executeAutomation(automation, { trigger: "week" });
       });
     });
   }
@@ -349,7 +375,7 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "month", id: automationId, models });
+        executeAutomation(automation, { trigger: "month" });
       });
     });
   }
@@ -364,14 +390,14 @@ const rebuildAutomations = async () => {
           (o: AutomationType) =>
             o.id === automationId || o.id === automationId.id
         );
-        automation.action({ trigger: "year", id: automationId, models });
+        executeAutomation(automation, { trigger: "year" });
       });
     });
   }
 };
 
 const addTrigger = (automation) => {
-  systemLog(`Processing trigger ${automation.id}`);
+  systemLog(`Registering trigger ${automation.id}`);
   automations[automation.id] = automation;
   map(automation.triggers, (trigger) => {
     switch (trigger) {
@@ -397,8 +423,43 @@ const addTrigger = (automation) => {
         yearTriggers.push(automation.id);
         break;
       default:
-        systemLog(`Unknown trigger type ${trigger}`);
+        if (typeof trigger === "object") {
+          changeTriggers.push(trigger);
+        } else {
+          systemLog(`Unknown trigger type ${trigger}`);
+        }
+
         break;
     }
   });
+};
+
+const executeAutomation = (automation: AutomationType, context) => {
+  if (automation.action) {
+    // Option 1: normal action
+    automation.action({ ...context, models, id: automation.id });
+  } else {
+    if (automation.simpleActions.length > 0) {
+      // Option 2: list of simple actions
+      automation.simpleActions.map((simpleAction) => {
+        switch (simpleAction.type) {
+          case "InsertObject":
+            InsertObject({ models }, simpleAction.arguments);
+            break;
+          case "UpdateCurrentObject":
+            UpdateCurrentObject(
+              { ...context, models, id: automation.id },
+              simpleAction.arguments
+            );
+            break;
+          default:
+            systemLog(`Unknown simple action type ${simpleAction.type}`);
+            break;
+        }
+      });
+    } else {
+      // Todo: process
+      systemLog(`automation ${automation.id} triggered, but no actions found.`);
+    }
+  }
 };

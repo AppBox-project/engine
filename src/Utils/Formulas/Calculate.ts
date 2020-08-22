@@ -1,16 +1,7 @@
 import { systemLog } from "../General";
 import { AutomationContextType } from "../Types";
-var nunjucks = require("nunjucks");
-import { format } from "date-fns";
 import { set } from "lodash";
-
-let env = nunjucks.configure();
-env.addFilter("date", (date, dateFormat) => {
-  return format(date, dateFormat);
-});
-env.addFilter("years", (time) => {
-  return time / 31536000000;
-});
+import nunjucks from "./Nunjucks";
 
 // Recalculate a formula
 const calculate = async (context: AutomationContextType) => {
@@ -65,7 +56,7 @@ const calculate = async (context: AutomationContextType) => {
           _id: object._id,
         });
 
-        var parsedFormula = env.renderString(
+        var parsedFormula = nunjucks.renderString(
           model?.fields[fieldId]?.typeArgs?.formula || "Error: formula missing",
           data
         );
@@ -117,7 +108,7 @@ const parseFormula = async (id, object, model, models) => {
     data[dep.field] = newVal;
   });
 
-  var parsedFormula = env.renderString(
+  var parsedFormula = nunjucks.renderString(
     field.typeArgs?.formula || "Error: formula missing",
     data
   );

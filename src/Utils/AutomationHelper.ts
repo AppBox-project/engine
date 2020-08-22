@@ -1,34 +1,43 @@
 import { systemLog } from "./General";
-import { TimeTrigger, AutomationContextType, ChangeFilterType } from "./Types";
+import { TimeTrigger, AutomationContextType, SimpleAction } from "./Types";
 
 export default class Automator {
   // Defaults
   id: any; // unique identifier
-  triggers: string[] = []; // List of event triggers
-  changeFilter: ChangeFilterType; // condition (for change)
-  action: (context: AutomationContextType) => void = () => {
-    systemLog(`No action set.`);
-  }; // Actions to perform
+  triggers: (string | {})[] = []; // List of event triggers
+  simpleActions: SimpleAction[] = [];
+  action: (context: AutomationContextType) => void;
 
   constructor(id) {
     this.id = id;
   }
 
   // Time based automations
-  every = (trigger: TimeTrigger | "change") => {
+  every = (trigger: TimeTrigger) => {
     this.triggers.push(trigger);
     return this;
   };
 
-  // Set changeFilter
-  where = (changeFilter: ChangeFilterType) => {
-    this.changeFilter = changeFilter;
+  // Change based automations
+  whenObjectChanges = (
+    dependencies: { model: string; field: string; fieldNot?: string }[]
+  ) => {
+    this.triggers.push({
+      id: this.id,
+      dependencies,
+    });
     return this;
   };
 
   // Register actions
-  perform = (action: (context: AutomationContextType) => void) => {
+  performs = (action: (context: AutomationContextType) => void) => {
     this.action = action;
+    return this;
+  };
+
+  // Register a simple action
+  runsAction = (action: SimpleAction) => {
+    this.simpleActions.push(action);
     return this;
   };
 }

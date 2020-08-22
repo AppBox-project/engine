@@ -5,7 +5,7 @@ const automation = new Automator("time")
   .every("second")
   .every("minute")
   .every("hour")
-  .perform((context) => {
+  .performs((context) => {
     systemLog(`Ding-dong! It's a new ${context.trigger}.`);
   });
 
