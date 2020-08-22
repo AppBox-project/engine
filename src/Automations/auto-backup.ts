@@ -1,15 +1,15 @@
 import Automator from "../Utils/AutomationHelper";
 
-export default new Automator("daily-update").every("day").runsAction({
+export default new Automator("auto-backup").every("week").runsAction({
   type: "InsertObject",
   arguments: {
     type: "system-task",
     object: {
-      type: "Box update",
-      name: "Update software",
+      type: "Database export",
+      name: "Weekly backup",
       description: "Triggered by the automator",
       when: "asap",
-      action: "box-update",
+      action: "backup",
       progress: 0,
       state: "Planned",
     },

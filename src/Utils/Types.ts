@@ -84,6 +84,6 @@ export interface AutomationType {
 }
 
 export interface SimpleAction {
-  type: "InsertObject" | "UpdateCurrentObject";
+  type: "InsertObject" | "UpdateCurrentObject" | "DeleteObjects";
   arguments: {};
 }

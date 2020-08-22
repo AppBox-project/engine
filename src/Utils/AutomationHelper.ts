@@ -13,7 +13,7 @@ export default class Automator {
   }
 
   // Time based automations
-  every = (trigger: TimeTrigger) => {
+  every = (trigger: TimeTrigger | string) => {
     this.triggers.push(trigger);
     return this;
   };

@@ -6,6 +6,7 @@ import Automator from "./Utils/AutomationHelper";
 import calculate from "./Utils/Formulas/Calculate";
 import { InsertObject } from "./Automations/Actions/InsertObject";
 import { UpdateCurrentObject } from "./Automations/Actions/UpdateCurrentObject";
+import { DeleteObjects } from "./Automations/Actions/DeleteObjects";
 var cron = require("node-cron");
 
 //@ts-ignore
@@ -32,9 +33,9 @@ let dayTriggers = [];
 let weekTriggers = [];
 let monthTriggers = [];
 let yearTriggers = [];
-let customTimeTriggers = [];
+let customTimeTriggers = {};
 let changeTriggers = [];
-let cronJobs = {};
+let cronJobs: {} = {};
 let models;
 
 // Connect to mongo (required for engine to run)
@@ -292,7 +293,7 @@ const rebuildAutomations = async () => {
   // Second
   if (secondTriggers.length > 0) {
     cronJobs["second"] = cron.schedule("* * * * * *", () => {
-      systemLog("Cron second triggered");
+      systemLog("Time trigger: second");
       secondTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -307,7 +308,7 @@ const rebuildAutomations = async () => {
   // Minute
   if (minuteTriggers.length > 0) {
     cronJobs["minute"] = cron.schedule("* * * * *", () => {
-      systemLog("Cron minute triggered");
+      systemLog("Time trigger: minute");
       minuteTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -322,7 +323,7 @@ const rebuildAutomations = async () => {
   // Hour
   if (hourTriggers.length > 0) {
     cronJobs["hour"] = cron.schedule("0 * * * *", () => {
-      systemLog("Cron hour triggered");
+      systemLog("Time trigger: hour");
       hourTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -337,8 +338,7 @@ const rebuildAutomations = async () => {
   // Day
   if (dayTriggers.length > 0) {
     cronJobs["day"] = cron.schedule("0 0 * * *", () => {
-      systemLog("Cron day triggered");
-
+      systemLog("Time trigger: day");
       dayTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -353,7 +353,7 @@ const rebuildAutomations = async () => {
   // Week
   if (weekTriggers.length > 0) {
     cronJobs["week"] = cron.schedule("0 0 * * 0", () => {
-      systemLog("Cron week triggered");
+      systemLog("Time trigger: week");
       weekTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -368,7 +368,7 @@ const rebuildAutomations = async () => {
   // Month
   if (monthTriggers.length > 0) {
     cronJobs["month"] = cron.schedule("0 0 1 * *", () => {
-      systemLog("Cron month triggered");
+      systemLog("Time trigger: month");
       monthTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -383,7 +383,7 @@ const rebuildAutomations = async () => {
   // Year
   if (yearTriggers.length > 0) {
     cronJobs["year"] = cron.schedule("0 0 1 1 *", () => {
-      systemLog("Cron year triggered");
+      systemLog("Time trigger: year");
       yearTriggers.map((automationId) => {
         const automation: AutomationType = find(
           automations,
@@ -391,6 +391,24 @@ const rebuildAutomations = async () => {
             o.id === automationId || o.id === automationId.id
         );
         executeAutomation(automation, { trigger: "year" });
+      });
+    });
+  }
+
+  // Custom CRON
+  if (customTimeTriggers !== {}) {
+    map(customTimeTriggers, (triggerAutomations, trigger) => {
+      cronJobs[trigger] = cron.schedule(trigger, () => {
+        systemLog(`Time trigger: Custom (${trigger})`);
+        //@ts-ignore
+        triggerAutomations.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "custom" });
+        });
       });
     });
   }
@@ -426,7 +444,9 @@ const addTrigger = (automation) => {
         if (typeof trigger === "object") {
           changeTriggers.push(trigger);
         } else {
-          systemLog(`Unknown trigger type ${trigger}`);
+          // Custom cron time triggers
+          customTimeTriggers[trigger] = customTimeTriggers[trigger] || []; // Make sure we have a value
+          customTimeTriggers[trigger].push(automation.id);
         }
 
         break;
@@ -441,16 +461,17 @@ const executeAutomation = (automation: AutomationType, context) => {
   } else {
     if (automation.simpleActions.length > 0) {
       // Option 2: list of simple actions
+      const baseContext = { ...context, models, id: automation.id };
       automation.simpleActions.map((simpleAction) => {
         switch (simpleAction.type) {
           case "InsertObject":
-            InsertObject({ models }, simpleAction.arguments);
+            InsertObject(baseContext, simpleAction.arguments);
+            break;
+          case "DeleteObjects":
+            DeleteObjects(baseContext, simpleAction.arguments);
             break;
           case "UpdateCurrentObject":
-            UpdateCurrentObject(
-              { ...context, models, id: automation.id },
-              simpleAction.arguments
-            );
+            UpdateCurrentObject(baseContext, simpleAction.arguments);
             break;
           default:
             systemLog(`Unknown simple action type ${simpleAction.type}`);
