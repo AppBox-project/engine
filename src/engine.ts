@@ -293,7 +293,7 @@ const rebuildAutomations = async () => {
           });
         }
         if (hasDayTrigger) {
-          dayTriggers.push({
+          minuteTriggers.push({
             id: formulaId,
             dependencies: dependencies,
           });

@@ -79,8 +79,9 @@ const calculate = async (context: AutomationContextType) => {
   } else {
     // Time trigger
     systemLog("Formula recalculation triggered by time.");
-    // When triggered by time we have got to change all the models.
-    const objectId = context.id.id.split(".")[1];
+
+    // When triggered by time we have to change all the objects in a model.
+    const objectId = context.id.split(".")[1];
     const objects = await context.models.entries.model.find({ objectId });
     const model = await context.models.objects.model.findOne({ key: objectId });
     objects.map((object) => {
@@ -89,24 +90,33 @@ const calculate = async (context: AutomationContextType) => {
   }
 };
 
-const parseFormula = async (id, object, model, models) => {
-  const fieldId = id.id.split(".")[2];
+const parseFormula = async (idField, object, model, models) => {
+  let id = idField;
+  if (id.id) {
+    id = id.id;
+  }
+  const fieldId = id.split(".")[2];
   const field = model.fields[fieldId];
 
   // Create data model for nunjucks
-  const data = { TODAY: new Date() }; // default constants
+  let data = { TODAY: new Date() }; // default constants
 
-  id.dependencies.map((dep) => {
-    let newVal = object.data[dep.field];
-    switch (model.fields[dep.field].type) {
-      case "date":
-        newVal = new Date(newVal); // Convert date stored as string
-        break;
-      default:
-        break;
-    }
-    data[dep.field] = newVal;
-  });
+  if (id.dependencies) {
+    id.dependencies.map((dep) => {
+      let newVal = object.data[dep.field];
+      switch (model.fields[dep.field].type) {
+        case "date":
+          newVal = new Date(newVal); // Convert date stored as string
+          break;
+        default:
+          break;
+      }
+      data[dep.field] = newVal;
+    });
+  } else {
+    // Todo: we don't have a list of dependencies here. This should be improved by reliably parsing dependencies in the spot itself.
+    data = { ...object.data, TODAY: new Date() };
+  }
 
   var parsedFormula = nunjucks.renderString(
     field.typeArgs?.formula || "Error: formula missing",
