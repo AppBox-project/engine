@@ -3,18 +3,17 @@
 export const extractVariablesFromFormula = (text) => {
   const vars = [];
   var regex = new RegExp(
-      /{{\s*\(*((?:(?:[a-zA-Z_]|\.|-|\s|))*)\)*\s*(?:\|.*)*\s*}}/g
+      /{{\s*(?:[a-zA-Z]*\()*((?:(?:[a-zA-Z_]|\.|-|\+|,|\s|))*)\)*\s*(?:\|.*)*\s*}}/g
     ),
     result;
 
   while ((result = regex.exec(text))) {
-    if (result[1].match("-")) {
-      result[1].split("-").map((o) => vars.push(o.trim()));
+    if (result[1].match(/[-,+]/g)) {
+      result[1].split(/[-,+]/g).map((o) => vars.push(o.trim()));
     } else {
       vars.push(result[1].trim());
     }
   }
-
   return vars;
 };
 

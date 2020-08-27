@@ -213,6 +213,7 @@ const rebuildAutomations = async () => {
   const modelList = await models.objects.model.find({});
   await modelList.reduce(async (previous, model) => {
     const keys = Object.keys(model.fields);
+    //@ts-ignore
     await keys.reduce(async (_previous, fieldKey) => {
       const field = model.fields[fieldKey];
 

@@ -87,7 +87,6 @@ const parseFormula = async (id, object, model, models) => {
     }
   }, variables[0]);
   data["TODAY"] = new Date();
-  console.log(data, formula);
 
   var parsedFormula = nunjucks.renderString(
     field.typeArgs?.formula || "Error: formula missing",
@@ -95,7 +94,7 @@ const parseFormula = async (id, object, model, models) => {
   );
   switch (field.typeArgs?.type) {
     case "number":
-      parsedFormula = parsedFormula ? parseInt(parsedFormula) : 0;
+      parsedFormula = parsedFormula !== "NaN" ? parseInt(parsedFormula) : 0;
       break;
     case "boolean":
       parsedFormula = parsedFormula === "true";
