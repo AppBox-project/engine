@@ -1,7 +1,12 @@
 import { systemLog } from "../General";
 import { AutomationContextType } from "../Types";
+import {
+  extractVariablesFromFormula,
+  turnVariablesIntoDependencyArray,
+} from "../Formulas/GetVariables";
 import { set } from "lodash";
 import nunjucks from "./Nunjucks";
+import { correctDataType } from "./DataTransformation";
 
 // Recalculate a formula
 const calculate = async (context: AutomationContextType) => {
@@ -9,72 +14,21 @@ const calculate = async (context: AutomationContextType) => {
     // Local change
     // A change in a formula that only references itself and can therefore only update itself.
     systemLog(
-      `Local change in object ${context.object._id}. Recalculating formula ${context.id.id}.`
+      `Local change in object ${context.object._id}. Recalculating formula ${context.id}.`
     );
     parseFormula(context.id, context.object, context.model, context.models);
   } else if (context.trigger === "foreignChange") {
     // A foreign change is a change that happened on a formula value with a relationship model. This can impact many objects.
-    // Todo: currently recalculates all objects. In theory it should be possible to backtrace this to only the affected objects. This could be difficult.
     systemLog(
-      `Foreign change in object ${context.object._id}. Recalculating formula ${context.id.id}.`
+      `Foreign change in object ${context.object._id}. Recalculating formula ${context.id}.`
     );
-    const modelId = context.id.id.split(".")[1];
-    const fieldId = context.id.id.split(".")[2];
 
-    // Todo: how to deal with a formula with multiple dependencies of which one foreign?
-    // --> (needs improvement) loop through all objects and recalculate their formulas.
-    context.models.entries.model.find({ objectId: modelId }).then((objects) => {
-      objects.map(async (object) => {
-        // For every object, split the formula
-        const inf = await context.id.originalDependency
-          .split(".")
-          .reduce(async (promise, dependencyPart) => {
-            const object = await promise;
-
-            if (!object) return;
-
-            if (dependencyPart.match("_r")) {
-              return await context.models.entries.model.findOne({
-                _id: object.data[dependencyPart.replace("_r", "")],
-              });
-            } else {
-              return object.data[dependencyPart.replace("_r", "")];
-            }
-          }, await context.models.entries.model.findOne({ _id: object._id }));
-
-        // We now have the value in inf
-        // Create data model for nunjucks
-        const data = {
-          TODAY: new Date(),
-        }; // default constants
-        set(data, context.id.originalDependency, inf);
-
-        const model = await context.models.objects.model.findOne({
-          key: modelId,
-        });
-        const newObject = await context.models.entries.model.findOne({
-          _id: object._id,
-        });
-
-        var parsedFormula = nunjucks.renderString(
-          model?.fields[fieldId]?.typeArgs?.formula || "Error: formula missing",
-          data
-        );
-        switch (model.fields[fieldId].typeArgs.type) {
-          case "number":
-            parsedFormula = parseInt(parsedFormula);
-            break;
-          case "boolean":
-            parsedFormula = parsedFormula === "true";
-            break;
-          default:
-            break;
-        }
-
-        newObject.data[fieldId] = parsedFormula;
-        newObject.markModified(`data.${fieldId}`);
-        newObject.save();
-      });
+    // Todo: currently recalculates all objects. In theory it should be possible to backtrace this to only the affected objects. Not an easy improvement, but definitely worth it.
+    const objectId = context.id.split(".")[1];
+    const objects = await context.models.entries.model.find({ objectId });
+    const model = await context.models.objects.model.findOne({ key: objectId });
+    objects.map((object) => {
+      parseFormula(context.id, object, model, context.models);
     });
   } else {
     // Time trigger
@@ -90,41 +44,58 @@ const calculate = async (context: AutomationContextType) => {
   }
 };
 
-const parseFormula = async (idField, object, model, models) => {
-  let id = idField;
-  if (id.id) {
-    id = id.id;
-  }
+const parseFormula = async (id, object, model, models) => {
   const fieldId = id.split(".")[2];
   const field = model.fields[fieldId];
+  const formula = field.typeArgs?.formula;
+  // Extract dependencies from formula
+  const variables = extractVariablesFromFormula(formula);
+  // Turn dependencylist into a {model, object}[] list.
+  const dependencies = await (
+    await turnVariablesIntoDependencyArray(variables, model, models)
+  ).dependencies;
 
   // Create data model for nunjucks
-  let data = { TODAY: new Date() }; // default constants
+  let data = {}; // default constants
 
-  if (id.dependencies) {
-    id.dependencies.map((dep) => {
-      let newVal = object.data[dep.field];
-      switch (model.fields[dep.field].type) {
-        case "date":
-          newVal = new Date(newVal); // Convert date stored as string
-          break;
-        default:
-          break;
-      }
-      data[dep.field] = newVal;
-    });
-  } else {
-    // Todo: we don't have a list of dependencies here. This should be improved by reliably parsing dependencies in the spot itself.
-    data = { ...object.data, TODAY: new Date() };
-  }
+  // Now parse variables
+  await variables.reduce(async (previous, variable) => {
+    if (variable.match(/\./)) {
+      // Foreign variable, follow the path
+      const varParts = variable.split(".");
+      let newValue;
+      await varParts.reduce(async (previous, part) => {
+        const previousObject = await previous;
+
+        let newId = null;
+        if (part.match("_r")) {
+          newId = previousObject.data[part.replace("_r", "")];
+        } else {
+          newValue = previousObject.data[part];
+        }
+
+        return models.entries.model.findOne({ _id: newId });
+      }, object);
+      // We've traversed the formula and gotten a value.
+      set(data, variable, newValue);
+    } else {
+      // Local variable
+      data[variable] = correctDataType(
+        object.data[variable],
+        model.fields[variable]?.type || "text"
+      );
+    }
+  }, variables[0]);
+  data["TODAY"] = new Date();
+  console.log(data, formula);
 
   var parsedFormula = nunjucks.renderString(
     field.typeArgs?.formula || "Error: formula missing",
     data
   );
-  switch (field.typeArgs.type) {
+  switch (field.typeArgs?.type) {
     case "number":
-      parsedFormula = parseInt(parsedFormula);
+      parsedFormula = parsedFormula ? parseInt(parsedFormula) : 0;
       break;
     case "boolean":
       parsedFormula = parsedFormula === "true";

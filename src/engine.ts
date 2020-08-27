@@ -1,12 +1,16 @@
 import scriptAutomations from "./Automations";
 import { systemLog } from "./Utils/General";
-import { map, find, replace } from "lodash";
+import { map, find } from "lodash";
 import { AutomationType } from "./Utils/Types";
 import Automator from "./Utils/AutomationHelper";
 import calculate from "./Utils/Formulas/Calculate";
 import { InsertObject } from "./Automations/Actions/InsertObject";
 import { UpdateCurrentObject } from "./Automations/Actions/UpdateCurrentObject";
 import { DeleteObjects } from "./Automations/Actions/DeleteObjects";
+import {
+  extractVariablesFromFormula,
+  turnVariablesIntoDependencyArray,
+} from "./Utils/Formulas/GetVariables";
 var cron = require("node-cron");
 
 //@ts-ignore
@@ -94,6 +98,7 @@ db.once("open", async function () {
         });
 
         let changeIsDependency = false;
+        let changeIsForeign: Boolean = false;
         // Todo: this loops quite a lot. Could probably be improved.
         automationId.dependencies.map((dep) => {
           if (object.objectId === dep.model) {
@@ -102,6 +107,7 @@ db.once("open", async function () {
               if (!dep.fieldNot) {
                 // Any field is okay
                 changeIsDependency = true;
+                if (dep.foreign) changeIsForeign = true;
               } else {
                 // Any field except
                 map(
@@ -111,6 +117,7 @@ db.once("open", async function () {
                     if (fieldKey.replace("data.", "") !== dep.fieldNot) {
                       // We also updated the right field
                       changeIsDependency = true;
+                      if (dep.foreign) changeIsForeign = true;
                     }
                   }
                 );
@@ -123,6 +130,7 @@ db.once("open", async function () {
                   if (fieldKey.replace("data.", "") === dep.field) {
                     // We also updated the right field
                     changeIsDependency = true;
+                    if (dep.foreign) changeIsForeign = true;
                   }
                 }
               );
@@ -135,11 +143,8 @@ db.once("open", async function () {
           const model = await models.objects.model.findOne({
             key: object.objectId,
           });
-
           executeAutomation(automation, {
-            trigger: automationId.originalDependency
-              ? "foreignChange"
-              : "change",
+            trigger: changeIsForeign ? "foreignChange" : "change",
             object,
             model,
             change: dbChange,
@@ -206,13 +211,15 @@ const rebuildAutomations = async () => {
   // --> Read their dependency. Set change dependencies for fields, time dependencies for time constants
   systemLog("Bootup -> Compiling formulas...");
   const modelList = await models.objects.model.find({});
-  modelList.map((model) => {
-    map(model.fields, (field, fieldKey) => {
+  await modelList.reduce(async (previous, model) => {
+    const keys = Object.keys(model.fields);
+    await keys.reduce(async (_previous, fieldKey) => {
+      const field = model.fields[fieldKey];
+
       if (field.type === "formula") {
         // Compile formula
         // Extract dependencies
         const formula = field.typeArgs.formula;
-        const dependencies = [];
         let hasDayTrigger = false;
         const formulaId = `f.${model.key}.${fieldKey}`;
         automations[formulaId] = new Automator(formulaId).performs(
@@ -221,70 +228,21 @@ const rebuildAutomations = async () => {
           }
         );
 
-        formula.split("{{").map((part) => {
-          if (part.length > 2) {
-            part
-              .split("}}")[0]
-              .split("|")[0]
-              .replace("(", "")
-              .replace(")", "")
-              .trim()
-              .split(/[ -]/)
-              .map(async (variable) => {
-                const dependency = variable.trim();
-                if (dependency.length > 0) {
-                  switch (dependency) {
-                    case "TODAY":
-                      hasDayTrigger = true;
-                      break;
-                    default:
-                      if (dependency.match("\\.")) {
-                        // This is a foreign dependency.
-                        // --> Loop through all the parts (split by .) and mark every field as a dependency
-                        await dependency
-                          .split(".")
-                          .reduce(async (promise, currentPart) => {
-                            const lastModel = await promise;
+        // Extract dependencies from formula
+        const deps = extractVariablesFromFormula(formula);
 
-                            let fieldId;
-                            if (currentPart.match("_r")) {
-                              fieldId = currentPart.replace("_r", "");
-                            } else {
-                              fieldId = currentPart;
-                            }
+        // Turn dependencylist into a {model, object}[] list.
+        const result = await turnVariablesIntoDependencyArray(
+          deps,
+          model,
+          models
+        );
+        hasDayTrigger = result.hasDayTrigger;
 
-                            dependencies.push({
-                              model: lastModel ? lastModel.key : model.key,
-                              field: fieldId,
-                            });
+        const dependencies = result.dependencies;
 
-                            // Return current model for the next step
-                            return await models.objects.model.findOne({
-                              key: fieldId,
-                            });
-                          }, undefined);
-
-                        // We have to do this here because of the asynchronous nature of database requests
-                        if (dependencies.length > 0) {
-                          changeTriggers.push({
-                            id: formulaId,
-                            dependencies: dependencies,
-                            originalDependency: dependency,
-                          });
-                        }
-                      } else {
-                        // This is a local dependency
-                        dependencies.push({
-                          model: model.key,
-                          field: dependency,
-                        });
-                      }
-                      break;
-                  }
-                }
-              });
-          }
-        });
+        // At this point we are sure that all the synchronous and asyncronous tasks are completed.
+        // The var dependencies is now an array that can be added to changeTriggers.
         // If >0 dependencies, we need a change trigger
         if (dependencies.length > 0) {
           changeTriggers.push({
@@ -292,148 +250,158 @@ const rebuildAutomations = async () => {
             dependencies: dependencies,
           });
         }
+        // If we have a day trigger (TODAY was used as a var), then fire every day.
         if (hasDayTrigger) {
           dayTriggers.push({
             id: formulaId,
             dependencies: dependencies,
           });
         }
+        return "Test";
       }
-    });
-  });
+    }, keys[0]);
 
-  // Cancel all previously set cronjobs (make sure no cron is planned without being neccessary)
-  if (cronJobs["second"]) cronJobs["second"].destroy();
-  if (cronJobs["minute"]) cronJobs["minute"].destroy();
-  if (cronJobs["hour"]) cronJobs["hour"].destroy();
-  if (cronJobs["day"]) cronJobs["day"].destroy();
-  if (cronJobs["week"]) cronJobs["week"].destroy();
-  if (cronJobs["month"]) cronJobs["month"].destroy();
-  if (cronJobs["year"]) cronJobs["year"].destroy();
+    return model;
+  }, modelList[0]);
 
-  // Set all cron jobs for timed based automations
-  // Second
-  if (secondTriggers.length > 0) {
-    cronJobs["second"] = cron.schedule("* * * * * *", () => {
-      systemLog("Time trigger: second");
-      secondTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "second" });
-      });
-    });
-  }
+  // Todo: the above logic is supposed to wait until it's done, then fire the rest of the script.
+  // For unknown reasons, this isn't working. We instead set a timeout for 10 seconds because it should be done by then.
+  setTimeout(() => {
+    // Cancel all previously set cronjobs (make sure no cron is planned without being neccessary)
+    if (cronJobs["second"]) cronJobs["second"].destroy();
+    if (cronJobs["minute"]) cronJobs["minute"].destroy();
+    if (cronJobs["hour"]) cronJobs["hour"].destroy();
+    if (cronJobs["day"]) cronJobs["day"].destroy();
+    if (cronJobs["week"]) cronJobs["week"].destroy();
+    if (cronJobs["month"]) cronJobs["month"].destroy();
+    if (cronJobs["year"]) cronJobs["year"].destroy();
 
-  // Minute
-  if (minuteTriggers.length > 0) {
-    cronJobs["minute"] = cron.schedule("* * * * *", () => {
-      systemLog("Time trigger: minute");
-      minuteTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "minute" });
-      });
-    });
-  }
-
-  // Hour
-  if (hourTriggers.length > 0) {
-    cronJobs["hour"] = cron.schedule("0 * * * *", () => {
-      systemLog("Time trigger: hour");
-      hourTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "hour" });
-      });
-    });
-  }
-
-  // Day
-  if (dayTriggers.length > 0) {
-    cronJobs["day"] = cron.schedule("0 0 * * *", () => {
-      systemLog("Time trigger: day");
-      dayTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "day" });
-      });
-    });
-  }
-
-  // Week
-  if (weekTriggers.length > 0) {
-    cronJobs["week"] = cron.schedule("0 0 * * 0", () => {
-      systemLog("Time trigger: week");
-      weekTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "week" });
-      });
-    });
-  }
-
-  // Month
-  if (monthTriggers.length > 0) {
-    cronJobs["month"] = cron.schedule("0 0 1 * *", () => {
-      systemLog("Time trigger: month");
-      monthTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "month" });
-      });
-    });
-  }
-
-  // Year
-  if (yearTriggers.length > 0) {
-    cronJobs["year"] = cron.schedule("0 0 1 1 *", () => {
-      systemLog("Time trigger: year");
-      yearTriggers.map((automationId) => {
-        const automation: AutomationType = find(
-          automations,
-          (o: AutomationType) =>
-            o.id === automationId || o.id === automationId.id
-        );
-        executeAutomation(automation, { trigger: "year" });
-      });
-    });
-  }
-
-  // Custom CRON
-  if (customTimeTriggers !== {}) {
-    map(customTimeTriggers, (triggerAutomations, trigger) => {
-      cronJobs[trigger] = cron.schedule(trigger, () => {
-        systemLog(`Time trigger: Custom (${trigger})`);
-        //@ts-ignore
-        triggerAutomations.map((automationId) => {
+    // Set all cron jobs for timed based automations
+    // Second
+    if (secondTriggers.length > 0) {
+      cronJobs["second"] = cron.schedule("* * * * * *", () => {
+        systemLog("Time trigger: second");
+        secondTriggers.map((automationId) => {
           const automation: AutomationType = find(
             automations,
             (o: AutomationType) =>
               o.id === automationId || o.id === automationId.id
           );
-          executeAutomation(automation, { trigger: "custom" });
+          executeAutomation(automation, { trigger: "second" });
         });
       });
-    });
-  }
+    }
+
+    // Minute
+    if (minuteTriggers.length > 0) {
+      cronJobs["minute"] = cron.schedule("* * * * *", () => {
+        systemLog("Time trigger: minute");
+        minuteTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "minute" });
+        });
+      });
+    }
+
+    // Hour
+    if (hourTriggers.length > 0) {
+      cronJobs["hour"] = cron.schedule("0 * * * *", () => {
+        systemLog("Time trigger: hour");
+        hourTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "hour" });
+        });
+      });
+    }
+
+    // Day
+    if (dayTriggers.length > 0) {
+      cronJobs["day"] = cron.schedule("0 0 * * *", () => {
+        systemLog("Time trigger: day");
+        dayTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "day" });
+        });
+      });
+    }
+
+    // Week
+    if (weekTriggers.length > 0) {
+      cronJobs["week"] = cron.schedule("0 0 * * 0", () => {
+        systemLog("Time trigger: week");
+        weekTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "week" });
+        });
+      });
+    }
+
+    // Month
+    if (monthTriggers.length > 0) {
+      cronJobs["month"] = cron.schedule("0 0 1 * *", () => {
+        systemLog("Time trigger: month");
+        monthTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "month" });
+        });
+      });
+    }
+
+    // Year
+    if (yearTriggers.length > 0) {
+      cronJobs["year"] = cron.schedule("0 0 1 1 *", () => {
+        systemLog("Time trigger: year");
+        yearTriggers.map((automationId) => {
+          const automation: AutomationType = find(
+            automations,
+            (o: AutomationType) =>
+              o.id === automationId || o.id === automationId.id
+          );
+          executeAutomation(automation, { trigger: "year" });
+        });
+      });
+    }
+
+    // Custom CRON
+    if (customTimeTriggers !== {}) {
+      map(customTimeTriggers, (triggerAutomations, trigger) => {
+        cronJobs[trigger] = cron.schedule(trigger, () => {
+          systemLog(`Time trigger: Custom (${trigger})`);
+          //@ts-ignore
+          triggerAutomations.map((automationId) => {
+            const automation: AutomationType = find(
+              automations,
+              (o: AutomationType) =>
+                o.id === automationId || o.id === automationId.id
+            );
+            executeAutomation(automation, { trigger: "custom" });
+          });
+        });
+      });
+    }
+
+    systemLog("Bootup -> Done.");
+  }, 5000);
 };
 
 const addTrigger = (automation) => {
