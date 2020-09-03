@@ -223,6 +223,7 @@ const rebuildAutomations = async () => {
         const formula = field.typeArgs.formula;
         let hasDayTrigger = false;
         const formulaId = `f.${model.key}.${fieldKey}`;
+        systemLog(`Compiling ${formulaId}...`);
         automations[formulaId] = new Automator(formulaId).performs(
           (context) => {
             calculate(context);

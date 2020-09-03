@@ -39,24 +39,27 @@ export const turnVariablesIntoDependencyArray: (
             // --> Loop through all the parts (split by .) and mark every field as a dependency for the appropriate model
             await dependency.split(".").reduce(async (promise, currentPart) => {
               const lastModel = await promise;
+              const currentModel = lastModel || model;
 
               let fieldId;
+              let nextModelId;
               if (currentPart.match("_r")) {
                 fieldId = currentPart.replace("_r", "");
+                nextModelId =
+                  currentModel.fields[fieldId].typeArgs.relationshipTo;
               } else {
                 fieldId = currentPart;
               }
-              const currentModelId = lastModel ? lastModel.key : model.key;
 
               dependencies.push({
-                model: currentModelId,
+                model: currentModel.key,
                 field: fieldId,
-                foreign: model.key !== currentModelId,
+                foreign: model.key !== currentModel.key,
               });
 
               // Return current model for the next step
               return await models.objects.model.findOne({
-                key: fieldId,
+                key: nextModelId,
               });
             }, undefined);
           } else {
