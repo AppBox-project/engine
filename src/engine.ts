@@ -92,7 +92,10 @@ db.once("open", async function () {
       );
 
       // If this change hits a dependency, execute the automation
-      if (dbChange.operationType === "update") {
+      if (
+        dbChange.operationType === "update" ||
+        dbChange.operationType === "insert"
+      ) {
         const object = await models.entries.model.findOne({
           _id: dbChange.documentKey?._id,
         });
@@ -111,8 +114,10 @@ db.once("open", async function () {
               } else {
                 // Any field except
                 map(
-                  dbChange.updateDescription.updatedFields.data ||
-                    dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                  dbChange.operationType === "update"
+                    ? dbChange.updateDescription.updatedFields.data ||
+                        dbChange.updateDescription.updatedFields // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                    : dbChange.fullDocument.data, // In case of an insert, loop the entire document
                   (newValue, fieldKey) => {
                     if (fieldKey.replace("data.", "") !== dep.fieldNot) {
                       // We also updated the right field
@@ -124,8 +129,10 @@ db.once("open", async function () {
               }
             } else {
               map(
-                dbChange.updateDescription.updatedFields.data ||
-                  dbChange.updateDescription.updatedFields, // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                dbChange.operationType === "update"
+                  ? dbChange.updateDescription.updatedFields.data ||
+                      dbChange.updateDescription.updatedFields // if an update doesn't mark the entire data object as changed, the fields get presented flat (data.fieldname)
+                  : dbChange.fullDocument.data, // In case of an insert, loop the entire document
                 (newValue, fieldKey) => {
                   if (fieldKey.replace("data.", "") === dep.field) {
                     // We also updated the right field
