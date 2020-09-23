@@ -39,6 +39,7 @@ let monthTriggers = [];
 let yearTriggers = [];
 let customTimeTriggers = {};
 let changeTriggers = [];
+let automationChangeTriggers = [];
 let cronJobs: {} = {};
 let models;
 
@@ -160,6 +161,36 @@ db.once("open", async function () {
         }
       }
     });
+
+    // Now we'll process automations (insert, update or insertOrUpdate)
+
+    map(automationChangeTriggers, (trigger, key) => {
+      switch (dbChange.operationType) {
+        case "insert":
+          if (trigger.type === "insert") {
+            let criteriaMet = false;
+            if (dbChange.fullDocument.objectId === trigger.args.model) {
+              criteriaMet = true;
+              map(trigger.args.fields || [], (value, key) => {
+                if (dbChange.fullDocument.data[key] !== value) {
+                  criteriaMet = false;
+                }
+              });
+            }
+
+            if (criteriaMet) {
+              executeAutomation(trigger.automation, {
+                change: dbChange,
+                trigger,
+              });
+            }
+          }
+          break;
+        default:
+          //This shouldn't occur after adding update and delete systemLog(`Unknown operationtype: ${dbChange.operationType}`);
+          break;
+      }
+    });
   });
 
   // Database initiated
@@ -182,6 +213,7 @@ const rebuildAutomations = async () => {
   monthTriggers = [];
   yearTriggers = [];
   changeTriggers = [];
+  automationChangeTriggers = [];
 
   // Source 1: Read files from /Automations folder
   scriptAutomations.map((automation) => {
@@ -201,10 +233,20 @@ const rebuildAutomations = async () => {
           `Bootup -> Registering automation from database: '${dbAutomation.data.name}' (${dbAutomation.data.key})`
         );
         const automation = new Automator(dbAutomation.data.key);
-        dbAutomation.data.triggers.map((trigger) => {
-          automation.every(trigger.trigger);
+
+        (dbAutomation.data.triggers || []).map((trigger) => {
+          if (
+            trigger.trigger === "insert" ||
+            trigger.trigger === "update" ||
+            trigger.trigger === "insertOrUpdate"
+          ) {
+            trigger.args = JSON.parse(trigger.args);
+            automation.automationTriggers.push(trigger);
+          } else {
+            automation.every(trigger.trigger);
+          }
         });
-        dbAutomation.data.actions.map((action) => {
+        (dbAutomation.data.actions || []).map((action) => {
           automation.runsAction({ ...action, arguments: action.args });
         });
 
@@ -415,6 +457,7 @@ const rebuildAutomations = async () => {
 
 const addTrigger = (automation) => {
   automations[automation.id] = automation;
+  // Time based triggers
   map(automation.triggers, (trigger) => {
     switch (trigger) {
       case "second":
@@ -449,6 +492,15 @@ const addTrigger = (automation) => {
 
         break;
     }
+  });
+
+  // Automation event triggers
+  map(automation.automationTriggers, (trigger) => {
+    automationChangeTriggers.push({
+      type: trigger.trigger,
+      args: trigger.args,
+      automation: automation,
+    });
   });
 };
 

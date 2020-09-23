@@ -7,6 +7,10 @@ export default class Automator {
   triggers: (string | {})[] = []; // List of event triggers
   simpleActions: SimpleAction[] = [];
   action: (context: AutomationContextType) => void;
+  automationTriggers: {
+    type: "insert" | "update" | "insertOrUpdate";
+    args: {};
+  }[] = [];
 
   constructor(id) {
     this.id = id;
