@@ -57,18 +57,18 @@ mongoose.connect(
 var db = mongoose.connection;
 db.once("open", async function () {
   models = {
-    objects: {
-      model: mongoose.model("Objects"),
-      stream: db.collection("objects").watch(),
+    models: {
+      model: mongoose.model("Models"),
+      stream: db.collection("models").watch(),
       listeners: {},
     },
     archive: {
       model: mongoose.model("Archive"),
       listeners: {},
     },
-    entries: {
-      model: mongoose.model("Entries"),
-      stream: db.collection("entries").watch(),
+    objects: {
+      model: mongoose.model("Objects"),
+      stream: db.collection("objects").watch(),
       listeners: {},
     },
     apppermissions: {
@@ -84,7 +84,7 @@ db.once("open", async function () {
   // Change streams
   // Todo: react appropriately to model changes
   // --> Such as:
-  models.entries.stream.on("change", (dbChange) => {
+  models.objects.stream.on("change", (dbChange) => {
     changeTriggers.map(async (automationId) => {
       const automation: AutomationType = find(
         automations,
@@ -96,7 +96,7 @@ db.once("open", async function () {
         dbChange.operationType === "update" ||
         dbChange.operationType === "insert"
       ) {
-        const object = await models.entries.model.findOne({
+        const object = await models.objects.model.findOne({
           _id: dbChange.documentKey?._id,
         });
 
@@ -147,7 +147,7 @@ db.once("open", async function () {
 
         // If we changed a field that is a dependency
         if (changeIsDependency) {
-          const model = await models.objects.model.findOne({
+          const model = await models.models.model.findOne({
             key: object.objectId,
           });
           executeAutomation(automation, {
@@ -224,7 +224,7 @@ const rebuildAutomations = async () => {
   });
 
   // Source 2: Read from database
-  models.entries.model
+  models.objects.model
     .find({ objectId: "automations", "data.active": true })
     .then((dbAutomations) => {
       dbAutomations.map((dbAutomation) => {
@@ -258,7 +258,7 @@ const rebuildAutomations = async () => {
   // --> Find fields that are formulas
   // --> Read their dependency. Set change dependencies for fields, time dependencies for time constants
   systemLog("Bootup -> Compiling formulas...");
-  const modelList = await models.objects.model.find({});
+  const modelList = await models.models.model.find({});
   await modelList.reduce(async (previous, model) => {
     const keys = Object.keys(model.fields);
     //@ts-ignore

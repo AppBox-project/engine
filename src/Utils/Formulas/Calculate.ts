@@ -25,8 +25,8 @@ const calculate = async (context: AutomationContextType) => {
 
     // Todo: currently recalculates all objects. In theory it should be possible to backtrace this to only the affected objects. Not an easy improvement, but definitely worth it.
     const objectId = context.id.split(".")[1];
-    const objects = await context.models.entries.model.find({ objectId });
-    const model = await context.models.objects.model.findOne({ key: objectId });
+    const objects = await context.models.objects.model.find({ objectId });
+    const model = await context.models.models.model.findOne({ key: objectId });
     objects.map((object) => {
       parseFormula(context.id, object, model, context.models);
     });
@@ -36,8 +36,8 @@ const calculate = async (context: AutomationContextType) => {
 
     // When triggered by time we have to change all the objects in a model.
     const objectId = context.id.split(".")[1];
-    const objects = await context.models.entries.model.find({ objectId });
-    const model = await context.models.objects.model.findOne({ key: objectId });
+    const objects = await context.models.objects.model.find({ objectId });
+    const model = await context.models.models.model.findOne({ key: objectId });
     objects.map((object) => {
       parseFormula(context.id, object, model, context.models);
     });
@@ -74,7 +74,7 @@ const parseFormula = async (id, object, model, models) => {
           newValue = previousObject.data[part];
         }
 
-        return models.entries.model.findOne({ _id: newId });
+        return models.objects.model.findOne({ _id: newId });
       }, object);
       // We've traversed the formula and gotten a value.
       set(data, variable, newValue);
@@ -103,7 +103,7 @@ const parseFormula = async (id, object, model, models) => {
       break;
   }
 
-  const newObject = await models.entries.model.findOne({
+  const newObject = await models.objects.model.findOne({
     _id: object._id,
   });
   newObject.data[fieldId] = parsedFormula;

@@ -58,7 +58,7 @@ export const turnVariablesIntoDependencyArray: (
               });
 
               // Return current model for the next step
-              return await models.objects.model.findOne({
+              return await models.models.model.findOne({
                 key: nextModelId,
               });
             }, undefined);

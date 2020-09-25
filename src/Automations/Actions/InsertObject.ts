@@ -11,7 +11,7 @@ export const InsertObject = (context, args) =>
         context.change.fullDocument
       );
     });
-    context.models.entries.model
+    context.models.objects.model
       .create({
         objectId: args.model,
         data: args.object,
