@@ -512,6 +512,9 @@ const executeAutomation = (automation: AutomationType, context) => {
       // Option 2: list of simple actions
       const baseContext = { ...context, models, id: automation.id };
       automation.simpleActions.map((simpleAction) => {
+        if (typeof simpleAction.arguments === "string")
+          simpleAction.arguments = JSON.parse(simpleAction.arguments);
+
         switch (simpleAction.type) {
           case "InsertObject":
             InsertObject(baseContext, simpleAction.arguments);
