@@ -16,11 +16,11 @@ var cron = require("node-cron");
 //@ts-ignore
 var mongoose = require("mongoose");
 //@ts-ignore
-require("./Utils/Models/Objects");
+require("./Utils/Models/Models");
 //@ts-ignore
 require("./Utils/Models/Archive");
 //@ts-ignore
-require("./Utils/Models/Entries");
+require("./Utils/Models/Objects");
 //@ts-ignore
 require("./Utils/Models/AppPermissions");
 //@ts-ignore
