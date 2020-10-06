@@ -1,10 +1,11 @@
 var n = require("nunjucks");
 import { format } from "date-fns";
 let nunjucks = n.configure();
-import { differenceInYears } from "date-fns";
+import { differenceInCalendarYears } from "date-fns";
 
-nunjucks.addGlobal("differenceInYears", differenceInYears);
-
+nunjucks.addGlobal("differenceInYears", (a, b) => {
+  return differenceInCalendarYears(new Date(a), new Date(b));
+});
 nunjucks.addFilter("date", (date, dateFormat) => {
   return format(date, dateFormat);
 });
