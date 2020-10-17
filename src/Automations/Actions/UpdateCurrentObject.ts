@@ -1,6 +1,8 @@
 import { systemLog } from "../../Utils/General";
 import { map } from "lodash";
-import nunjucks from "../../Utils/Formulas/Nunjucks";
+import Nunjucks from "../../Utils/Formulas/Nunjucks";
+
+const nunjucks = new Nunjucks();
 
 export const UpdateCurrentObject = (context, args) =>
   new Promise((resolve, reject) => {
@@ -8,7 +10,7 @@ export const UpdateCurrentObject = (context, args) =>
       `UpdateCurrentObject (${context.id}): Updating ${context.object._id}`
     );
     map(args.update, (value, key) => {
-      context.object.data[key] = nunjucks.renderString(
+      context.object.data[key] = nunjucks.engine.renderString(
         value,
         context.object.data
       );

@@ -1,19 +1,23 @@
 var n = require("nunjucks");
 import { format } from "date-fns";
-let nunjucks = n.configure();
 import { differenceInCalendarYears } from "date-fns";
 
-nunjucks.addGlobal("differenceInYears", (a, b) => {
-  return differenceInCalendarYears(new Date(a), new Date(b));
-});
-nunjucks.addFilter("date", (date, dateFormat) => {
-  return format(date, dateFormat);
-});
+export default class Nunjucks {
+  models;
+  engine;
+  contextVars;
+  setContextVars = (vars) => (this.contextVars = vars);
 
-nunjucks.addFilter("years", (time) => {
-  console.log(time);
+  constructor(models?) {
+    if (models) this.models = models;
+    this.engine = n.configure();
+    this.engine.addGlobal("differenceInYears", (a, b) =>
+      differenceInCalendarYears(new Date(a), new Date(b))
+    );
 
-  return time / 31536000000;
-});
-
-export default nunjucks;
+    this.engine.addFilter("date", (date, dateFormat) =>
+      format(date, dateFormat)
+    );
+    this.engine.addFilter("years", (time) => time / 31536000000);
+  }
+}

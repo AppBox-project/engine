@@ -1,12 +1,14 @@
 import { systemLog } from "../../Utils/General";
 import { map } from "lodash";
-import nunjucks from "../../Utils/Formulas/Nunjucks";
+import Nunjucks from "../../Utils/Formulas/Nunjucks";
+
+const nunjucks = new Nunjucks();
 
 export const InsertObject = (context, args) =>
   new Promise((resolve, reject) => {
     systemLog(`InsertObject: ${args.model}`);
     map(args.object, (value, key) => {
-      args.object[key] = nunjucks.renderString(
+      args.object[key] = nunjucks.engine.renderString(
         value,
         context.change.fullDocument
       );

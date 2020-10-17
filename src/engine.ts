@@ -100,8 +100,9 @@ db.once("open", async function () {
           _id: dbChange.documentKey?._id,
         });
 
-        let changeIsDependency = false;
+        let changeIsDependency: Boolean = false;
         let changeIsForeign: Boolean = false;
+        let changeIsForeignCount: Boolean = false;
         // Todo: this loops quite a lot. Could probably be improved.
         automationId.dependencies.map((dep) => {
           if (object.objectId === dep.model) {
@@ -110,6 +111,7 @@ db.once("open", async function () {
               if (!dep.fieldNot) {
                 // Any field is okay
                 changeIsDependency = true;
+                if (dep.targetModel) changeIsForeignCount = true;
                 if (dep.foreign) changeIsForeign = true;
               } else {
                 // Any field except
@@ -150,8 +152,13 @@ db.once("open", async function () {
           const model = await models.models.model.findOne({
             key: object.objectId,
           });
+
           executeAutomation(automation, {
-            trigger: changeIsForeign ? "foreignChange" : "change",
+            trigger: changeIsForeign
+              ? "foreignChange"
+              : changeIsForeignCount
+              ? "foreignCountChange"
+              : "change",
             object,
             model,
             change: dbChange,
@@ -268,7 +275,7 @@ const rebuildAutomations = async () => {
       if (field.type === "formula") {
         // Compile formula
         // Extract dependencies
-        const formula = field.typeArgs.formula;
+        const formula: string = field.typeArgs.formula;
         let hasDayTrigger = false;
         const formulaId = `f.${model.key}.${fieldKey}`;
         systemLog(`Compiling ${formulaId}...`);
@@ -279,7 +286,21 @@ const rebuildAutomations = async () => {
         );
 
         // Extract dependencies from formula
-        const deps = extractVariablesFromFormula(formula);
+        let deps = [];
+        if (formula.toLowerCase().match("count_related")) {
+          // Specific case: count_related requires a different way of finding the formulas
+          deps = [
+            `__COUNT__${model.key}.${fieldKey}___${formula
+              .toLowerCase()
+              .split("count_related(")[1]
+              .split(")")[0]
+              .split(",")[0]
+              .replace(/[^a-zA-Z_-]/gm, "")
+              .trim()}._ANY_`,
+          ];
+        } else {
+          deps = extractVariablesFromFormula(formula);
+        }
 
         // Turn dependencylist into a {model, object}[] list.
         const result = await turnVariablesIntoDependencyArray(
@@ -287,6 +308,7 @@ const rebuildAutomations = async () => {
           model,
           models
         );
+
         hasDayTrigger = result.hasDayTrigger;
 
         const dependencies = result.dependencies;

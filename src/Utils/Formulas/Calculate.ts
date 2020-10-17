@@ -5,11 +5,16 @@ import {
   turnVariablesIntoDependencyArray,
 } from "../Formulas/GetVariables";
 import { set } from "lodash";
-import nunjucks from "./Nunjucks";
+import Nunjucks from "./Nunjucks";
 import { correctDataType } from "./DataTransformation";
+
+let nunjucks;
 
 // Recalculate a formula
 const calculate = async (context: AutomationContextType) => {
+  if (!nunjucks) {
+    nunjucks = new Nunjucks(context.models);
+  }
   if (context.trigger === "change") {
     // Local change
     // A change in a formula that only references itself and can therefore only update itself.
@@ -30,6 +35,53 @@ const calculate = async (context: AutomationContextType) => {
     objects.map((object) => {
       parseFormula(context.id, object, model, context.models);
     });
+  } else if (context.trigger === "foreignCountChange") {
+    const foreignModel = context.model;
+    const localModel = await context.models.models.model.findOne({
+      key: context.id.split(".")[1],
+    });
+    const fieldId = context.id.split(".")[2];
+    const field = localModel.fields[fieldId];
+    const formula = field.typeArgs?.formula;
+
+    const formulaArguments = formula.split("count_related(")[1].split(",");
+    const countObj = formulaArguments[0].replace(/[^a-zA-Z_-]/gm, "");
+    const countField = formulaArguments[1].replace(/[^a-zA-Z_-]/gm, "");
+    formulaArguments.splice(0, 2);
+    const filter = JSON.parse(
+      `${formulaArguments.join(",").split("}]")[0]}}]`.replace("'", '"')
+    );
+
+    const localObject = await context.models.objects.model.findOne({
+      _id: context.object.data[countField],
+    });
+
+    // Already execute count
+    let count = 0;
+    const query = await context.models.objects.model.find({
+      objectId: countObj,
+      [`data.${countField}`]: context.object.data[countField],
+    });
+    query.map((obj) => {
+      let matches = false;
+      filter.map((f) => {
+        switch (f.operator) {
+          case "equals":
+            if (obj.data[f.field] === f.value) {
+              matches = true;
+            }
+            break;
+          default:
+            break;
+        }
+      });
+      if (matches) count++;
+    });
+    localModel.fields[fieldId].typeArgs.formula = formula.replace(
+      /{{\W*count_related\(.*\)\W*}}/gm,
+      count
+    );
+    parseFormula(context.id, localObject, localModel, context.models);
   } else {
     // Time trigger
     systemLog("Formula recalculation triggered by time.");
@@ -48,6 +100,7 @@ const parseFormula = async (id, object, model, models) => {
   const fieldId = id.split(".")[2];
   const field = model.fields[fieldId];
   const formula = field.typeArgs?.formula;
+
   // Extract dependencies from formula
   const variables = extractVariablesFromFormula(formula);
   // Turn dependencylist into a {model, object}[] list.
@@ -88,10 +141,12 @@ const parseFormula = async (id, object, model, models) => {
   }, variables[0]);
   data["TODAY"] = new Date();
 
-  var parsedFormula = nunjucks.renderString(
+  var parsedFormula = nunjucks.engine.renderString(
     field.typeArgs?.formula || "Error: formula missing",
     data
   );
+
+  // Formula parsed
   switch (field.typeArgs?.type) {
     case "number":
       parsedFormula = parsedFormula !== "NaN" ? parseInt(parsedFormula) : 0;

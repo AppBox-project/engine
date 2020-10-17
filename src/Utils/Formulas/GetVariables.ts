@@ -34,7 +34,19 @@ export const turnVariablesIntoDependencyArray: (
           hasDayTrigger = true;
           break;
         default:
-          if (dependency.match("\\.")) {
+          if (dependency.match("__COUNT__")) {
+            // Count remote dependency
+            const local = dependency.split("__COUNT__")[1].split("___")[0];
+            const foreign = dependency
+              .split(`__COUNT__${local}___`)[1]
+              .split(".")[0];
+            dependencies.push({
+              model: foreign,
+              field: "_ANY_",
+              targetModel: local.split(".")[0],
+              targetField: local.split(".")[1],
+            });
+          } else if (dependency.match("\\.")) {
             // This is a foreign dependency.
             // --> Loop through all the parts (split by .) and mark every field as a dependency for the appropriate model
             await dependency.split(".").reduce(async (promise, currentPart) => {
