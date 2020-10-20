@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@types/lodash": "^4.14.161",
-    "@types/node": "^14.11.2",
+    "@types/node": "^14.11.11",
     "concurrently": "^5.3.0",
     "lodash": "^4.17.20",
     "mongoose": "^5.10.9",
