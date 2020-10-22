@@ -1,11 +1,12 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import { map } from "lodash";
+import Automation from "./Classes/Automation";
 var mongoose = require("mongoose");
 
 export default class Server {
   models: DatabaseModel;
   whenReady;
-  automations = {};
+  automations: { [key: string]: Automation } = {};
   processes = {};
   fieldTriggers = {};
   timeTriggers = {};
@@ -37,6 +38,8 @@ export default class Server {
   }
 
   // Rebuild engine
+  // --> Perform various tasks.
+  // ---> Compile formulas
   rebuild = async () =>
     new Promise((resolve) => {
       // Reset variables
@@ -52,16 +55,34 @@ export default class Server {
     });
 
   // Compile formulas
+  // --> Get all formula fields and compile them
   compileFormulas = () =>
     new Promise(async (resolve) => {
-      (await this.models.models.model.find()).map((m) => {
-        map(m.fields, (field, key) => {
+      const models = await this.models.models.model.find();
+      await models.reduce(async (prev, model) => {
+        const fields = Object.keys(model.fields);
+        //@ts-ignore
+        await fields.reduce(async (prevField, fieldKey) => {
+          const field = model.fields[fieldKey];
           if (field.type === "formula") {
-            console.log(field);
-          }
-        });
-      });
+            // console.log(field.typeArgs.formula);
+            const automationName = `${model.key}-${fieldKey}`;
+            const newAutomation = new Automation(
+              automationName,
+              model,
+              this.models
+            );
+            await newAutomation.compileFormula(
+              field.typeArgs.formula,
+              fieldKey
+            );
 
+            this.automations[automationName] = newAutomation;
+          }
+          return field;
+        }, fields[0]);
+        return model;
+      }, models[0]);
       resolve();
     });
 }
