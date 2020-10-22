@@ -1,8 +1,13 @@
 import DatabaseModel from "./Classes/DatabaseModel";
+import Automation from "./Automation";
 import { map } from "lodash";
-import Automation from "./Classes/Automation";
+import { ObjectType } from "./Types";
 var mongoose = require("mongoose");
 
+/* * * SERVER * * *
+ * The server is a helper class
+ * It connects to the database and builds() all the indexes, processes and automations.
+ */
 export default class Server {
   models: DatabaseModel;
   whenReady;
@@ -42,6 +47,8 @@ export default class Server {
   // ---> Compile formulas
   rebuild = async () =>
     new Promise((resolve) => {
+      console.log("--> Rebuilding engine logic.");
+
       // Reset variables
       this.automations = {};
       this.processes = {};
@@ -58,6 +65,8 @@ export default class Server {
   // --> Get all formula fields and compile them
   compileFormulas = () =>
     new Promise(async (resolve) => {
+      console.log("--> Compiling formulas...");
+
       const models = await this.models.models.model.find();
       await models.reduce(async (prev, model) => {
         const fields = Object.keys(model.fields);
@@ -83,6 +92,45 @@ export default class Server {
         }, fields[0]);
         return model;
       }, models[0]);
-      resolve();
+
+      // Todo: Figure out why this calls after sync calls, before asyncs are doen.
+      setTimeout(() => {
+        resolve();
+      }, 1000);
     });
+
+  // Process update
+  // This function is called every time an object is updated or created.
+  // It checks the change to see if it triggers an automation. If so, it executes it.
+  onReceiveUpdate = (updateArray, object: ObjectType) => {
+    let changeTriggersAutomation = false;
+    const automationsToTrigger: Automation[] = [];
+    map(this.automations, (automation: Automation, ak) => {
+      map(automation.dependencies, (dependency, dk) => {
+        if (dependency.model === object.objectId) {
+          map(updateArray, (updateValue, updateKey) => {
+            if (
+              dependency.field === "__ANY" || // Any field within this model triggers calculation
+              `data.${dependency.field}` === updateKey // Or we're a field match.
+            ) {
+              if (dependency.foreign) {
+                console.log(
+                  `Foreign dependency triggered for ${automation.name}, but processes haven't been built yet.`
+                );
+              } else {
+                changeTriggersAutomation = true;
+                automationsToTrigger.push(automation);
+              }
+            }
+          });
+        }
+      });
+    });
+
+    if (changeTriggersAutomation) {
+      automationsToTrigger.map((automation) => {
+        automation.triggerActions();
+      });
+    }
+  };
 }

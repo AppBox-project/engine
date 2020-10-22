@@ -1,6 +1,6 @@
-import { ModelType } from "../Types";
-import DatabaseModel from "./DatabaseModel";
-import functions from "../Formulas/Functions";
+import { ModelType } from "./Types";
+import DatabaseModel from "./Classes/DatabaseModel";
+import functions from "./Formulas/Functions";
 
 var uniqid = require("uniqid");
 
@@ -125,7 +125,7 @@ export default class Formula {
       }, this.tags[0]);
 
       // Done
-      console.log(`Formula ${this.name} compiled.`);
+      console.log(`--> 🧪 Formula '${this.name}' compiled.`);
       resolve();
     });
 
@@ -137,18 +137,33 @@ export default class Formula {
       // Step 1, process arguments
       // --> Split arguments based on comma
       const fArguments = fArgs.split(/,(?![^\(]*\))(?![^\[]*")(?![^\[]*")/gm); // Splits commas, except when they're in brackets or apostrophes
+      const newArguments = [];
       // Loop through arguments (async) and if they are a function themselves, preprocess those first.
       await fArguments.reduce(async (prev, curr) => {
         if (curr.match(/\w*\(.+\)/)) {
           // This part has a function call. We need to preprocess these functions to figure out what the dependencies are.
           const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(curr);
           await this.preprocessFunction(func.groups.fName, func.groups.fArgs);
+          // Todo: add compiled argument whereas possible
+          newArguments.push(curr);
+        } else {
+          newArguments.push(curr.replace(/^['"]/g, "").replace(/['"]$/g, ""));
         }
         return true;
       }, fArguments[0]);
 
       // Done looping, now preprocess the function
-      const deps = functions[fName].onCompile(fArguments);
-      console.log("onCompile() returns these dependencies:", deps);
+      const deps = functions[fName].onCompile(newArguments);
+      deps.map((dep) => {
+        if (typeof dep === "string") {
+          this.dependencies.push({
+            model: this.model.key,
+            field: dep,
+            foreign: false,
+          });
+        } else {
+          this.dependencies.push(dep);
+        }
+      });
     });
 }

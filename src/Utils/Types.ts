@@ -57,6 +57,13 @@ interface ModelApiType {
   authentication?: "none" | "user";
 }
 
+// Object
+export interface ObjectType {
+  _id: string;
+  objectId: string;
+  data: {};
+}
+
 // System
 export interface AppBoxData {
   objects: {
