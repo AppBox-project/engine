@@ -1,4 +1,4 @@
-import { ModelType } from "./Types";
+import { AutomationContext, ModelType } from "./Types";
 import DatabaseModel from "./Classes/DatabaseModel";
 import Formula from "./Formula";
 import calculate from "./Formulas/Calculate";
@@ -36,12 +36,12 @@ export default class Automation {
 
   // Trigger actions
   // - Runs actions contained within this automation
-  triggerActions = () => {
+  triggerActions = (context: AutomationContext) => {
     console.log(`${this.name} triggered.`);
     this.actions.map((action) => {
       switch (action.type) {
         case "formula_calculate":
-          calculate(this.formula);
+          calculate(this.formula, context);
           break;
         default:
           console.log(

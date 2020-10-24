@@ -1,6 +1,7 @@
-import { ModelType } from "./Types";
+import { ModelType, ObjectType } from "./Types";
 import DatabaseModel from "./Classes/DatabaseModel";
 import functions from "./Formulas/Functions";
+import { find } from "lodash";
 
 var uniqid = require("uniqid");
 
@@ -37,7 +38,7 @@ export default class Formula {
       while ((result = reg.exec(this.formula))) {
         const varName = uniqid();
         this.tags.push({ tag: result.groups.var, identifier: varName });
-        this.formula = this.formula.replace(result[0], `$___${varName}`);
+        this.formula = this.formula.replace(result[0], `$___${varName}___$`);
       }
 
       // Turn tags into dependencies
@@ -166,4 +167,18 @@ export default class Formula {
         }
       });
     });
+
+  // Use all the information available in this class after compilation and compile it
+  calculate = (data: {}) => {
+    let output = this.formula;
+    this.formula.split(/\$___(?<tagName>.+?)___\$/gm).map((t) => {
+      const tagId = t.trim();
+      if ((tagId.trim() || "").length > 0) {
+        const tag = find(this.tags, (o) => o.identifier === tagId).tag;
+        output = output.replace(`$___${tagId}___$`, data[tag]);
+      }
+    });
+
+    return output;
+  };
 }

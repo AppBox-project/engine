@@ -1,3 +1,6 @@
+import { Mongoose } from "mongoose";
+import Server from "./Server";
+
 // Model types
 export interface ModelType {
   key: string;
@@ -99,4 +102,12 @@ export interface UserType {
   data: {
     username: string;
   };
+}
+
+// Engine specific
+export interface AutomationContext {
+  server: Server;
+  object: ObjectType;
+  dbAction;
+  change;
 }

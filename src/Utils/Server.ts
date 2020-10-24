@@ -1,7 +1,7 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import Automation from "./Automation";
 import { map } from "lodash";
-import { ObjectType } from "./Types";
+import { AutomationContext, ObjectType } from "./Types";
 var mongoose = require("mongoose");
 
 /* * * SERVER * * *
@@ -102,13 +102,13 @@ export default class Server {
   // Process update
   // This function is called every time an object is updated or created.
   // It checks the change to see if it triggers an automation. If so, it executes it.
-  onReceiveUpdate = (updateArray, object: ObjectType) => {
+  onReceiveUpdate = (context: AutomationContext) => {
     let changeTriggersAutomation = false;
     const automationsToTrigger: Automation[] = [];
     map(this.automations, (automation: Automation, ak) => {
       map(automation.dependencies, (dependency, dk) => {
-        if (dependency.model === object.objectId) {
-          map(updateArray, (updateValue, updateKey) => {
+        if (dependency.model === context.object.objectId) {
+          map(context.change, (updateValue, updateKey) => {
             if (
               dependency.field === "__ANY" || // Any field within this model triggers calculation
               `data.${dependency.field}` === updateKey // Or we're a field match.
@@ -129,7 +129,7 @@ export default class Server {
 
     if (changeTriggersAutomation) {
       automationsToTrigger.map((automation) => {
-        automation.triggerActions();
+        automation.triggerActions(context);
       });
     }
   };
