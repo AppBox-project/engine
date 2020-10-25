@@ -1,17 +1,7 @@
-export type TimeTrigger =
-  | "second"
-  | "minute"
-  | "hour"
-  | "day"
-  | "week"
-  | "month";
+import { Mongoose } from "mongoose";
+import Server from "./Server";
 
-export interface ObjectType {
-  _id: string;
-  data;
-  objectId: string;
-}
-
+// Model types
 export interface ModelType {
   key: string;
   name: string;
@@ -31,6 +21,7 @@ export interface ModelType {
     deleteOwn?: ModelApiType;
     delete?: ModelApiType;
   };
+  extensions?: { [key: string]: {} };
   permissions: {
     read: string[];
     create: string[];
@@ -43,6 +34,7 @@ export interface ModelType {
   };
   _id: any;
 }
+
 export interface ModelFieldType {
   name: string;
   required: boolean;
@@ -54,7 +46,6 @@ export interface ModelFieldType {
     type?: string;
     relationshipTo?: string;
     options?: { label: string; value: string }[];
-    formula?: string;
   };
 }
 
@@ -68,22 +59,55 @@ interface ModelApiType {
   endpoint?: string;
   authentication?: "none" | "user";
 }
-export interface AutomationContextType {
-  trigger: string;
-  object?: ObjectType;
-  model?: ModelType;
-  change?;
-  models;
-  id;
+
+// Object
+export interface ObjectType {
+  _id: string;
+  objectId: string;
+  data: {};
 }
 
-export interface AutomationType {
-  id: string;
-  action: (context: AutomationContextType) => void;
-  simpleActions: SimpleAction[];
+// System
+export interface AppBoxData {
+  objects: {
+    model;
+    stream;
+    listeners: {};
+  };
+  entries: {
+    model;
+    stream;
+    listeners: {};
+  };
+  apppermissions: {
+    model;
+  };
+  usersettings: {
+    model;
+    stream;
+    listeners: {};
+  };
 }
 
-export interface SimpleAction {
-  type: "InsertObject" | "UpdateCurrentObject" | "DeleteObjects";
-  arguments: {};
+export interface SocketInfoType {
+  listeners: any[];
+  permissions: [string];
+  username: string;
+  user: UserType;
+  identified: boolean;
+}
+
+export interface UserType {
+  _id: string;
+  data: {
+    username: string;
+  };
+}
+
+// Engine specific
+export interface AutomationContext {
+  server: Server;
+  object: ObjectType;
+  dbAction;
+  change;
 }

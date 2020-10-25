@@ -4,9 +4,10 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 mongoose.model(
-  "Objects",
+  "Attachments",
   new Schema({
     objectId: String,
-    data: Schema.Types.Mixed,
+    name: String,
+    path: String,
   })
 );
