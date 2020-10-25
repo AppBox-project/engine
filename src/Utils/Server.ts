@@ -1,7 +1,11 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import Automation from "./Automation";
 import { map } from "lodash";
-import { AutomationContext, ObjectType } from "./Types";
+import { AutomationContext } from "./Types";
+import Process from "./Process";
+import { ProcessStep } from "./Process/ProcessStep";
+import { ProcessStepCondition } from "./Process/ProcessStepCondition";
+import { ProcessStepAction } from "./Process/ProcessStepAction";
 var mongoose = require("mongoose");
 
 /* * * SERVER * * *
@@ -12,7 +16,7 @@ export default class Server {
   models: DatabaseModel;
   whenReady;
   automations: { [key: string]: Automation } = {};
-  processes = {};
+  processes: { [key: string]: Process } = {};
   fieldTriggers = {};
   timeTriggers = {};
 
@@ -74,7 +78,7 @@ export default class Server {
         await fields.reduce(async (prevField, fieldKey) => {
           const field = model.fields[fieldKey];
           if (field.type === "formula") {
-            const automationName = `${model.key}-${fieldKey}`;
+            const automationName = `${model.key}---${fieldKey}`;
             const newAutomation = new Automation(
               automationName,
               model,
@@ -88,6 +92,27 @@ export default class Server {
               newAutomation.formula.outputType = "number";
             if (field.typeArgs?.type === "boolean")
               newAutomation.formula.outputType = "boolean";
+
+            // After compiling formulas into automations, we take a look if any foreign relations exist.
+            // Because of their (relative) complexity, foreign relations require processes
+            // At this point we will make those processes.
+            newAutomation.formula.dependencies.map((dep) => {
+              if (dep.foreign) {
+                // Create a new process
+                const newProcess = new Process(automationName, model, models);
+                // Add variables
+                newProcess.addVariable({ required: true, name: "objectId" }); // Store the objectId
+                newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula
+                // Add a step that finds affected objects and then calculates the formula
+                newProcess.addStep(
+                  new ProcessStep(
+                    [new ProcessStepCondition("always")], // Always perform this step
+                    [new ProcessStepAction()]
+                  )
+                );
+                this.processes[automationName] = newProcess;
+              }
+            });
 
             this.automations[automationName] = newAutomation;
           }

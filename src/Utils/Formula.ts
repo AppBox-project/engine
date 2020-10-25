@@ -24,7 +24,7 @@ export default class Formula {
   ) {
     this.formula = formula;
     this.model = model;
-    this.name = `${model.key}___${fieldKey}`;
+    this.name = `${model.key}---${fieldKey}`;
     this.modelCache[model.key] = model;
     this.models = models;
   }
