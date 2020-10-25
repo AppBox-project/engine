@@ -74,7 +74,6 @@ export default class Server {
         await fields.reduce(async (prevField, fieldKey) => {
           const field = model.fields[fieldKey];
           if (field.type === "formula") {
-            // console.log(field.typeArgs.formula);
             const automationName = `${model.key}-${fieldKey}`;
             const newAutomation = new Automation(
               automationName,
@@ -85,6 +84,10 @@ export default class Server {
               field.typeArgs.formula,
               fieldKey
             );
+            if (field.typeArgs?.type === "number")
+              newAutomation.formula.outputType = "number";
+            if (field.typeArgs?.type === "boolean")
+              newAutomation.formula.outputType = "boolean";
 
             this.automations[automationName] = newAutomation;
           }
@@ -93,7 +96,7 @@ export default class Server {
         return model;
       }, models[0]);
 
-      // Todo: Figure out why this calls after sync calls, before asyncs are doen.
+      // Todo: Figure out why this calls after sync calls, before asyncs are done.
       setTimeout(() => {
         resolve();
       }, 1000);

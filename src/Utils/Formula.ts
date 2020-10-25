@@ -14,6 +14,7 @@ export default class Formula {
   modelCache: { [modelKey: string]: ModelType } = {};
   models: DatabaseModel;
   functions: { fName; fArgs }[] = [];
+  outputType: "text" | "number" | "boolean" | "picture" = "text";
 
   constructor(
     formula: string,
@@ -23,7 +24,7 @@ export default class Formula {
   ) {
     this.formula = formula;
     this.model = model;
-    this.name = `${model.key}-${fieldKey}`;
+    this.name = `${model.key}___${fieldKey}`;
     this.modelCache[model.key] = model;
     this.models = models;
   }
@@ -159,26 +160,84 @@ export default class Formula {
         if (typeof dep === "string") {
           this.dependencies.push({
             model: this.model.key,
-            field: dep,
+            field: dep.trim(),
             foreign: false,
           });
         } else {
           this.dependencies.push(dep);
         }
       });
+      resolve();
     });
 
   // Use all the information available in this class after compilation and compile it
-  calculate = (data: {}) => {
-    let output = this.formula;
-    this.formula.split(/\$___(?<tagName>.+?)___\$/gm).map((t) => {
-      const tagId = t.trim();
-      if ((tagId.trim() || "").length > 0) {
-        const tag = find(this.tags, (o) => o.identifier === tagId).tag;
-        output = output.replace(`$___${tagId}___$`, data[tag]);
-      }
+  calculate = async (dataObj: {}) =>
+    new Promise(async (resolve) => {
+      const data = { ...dataObj, TODAY: new Date() };
+      const tags = this.formula.split(/\$___(?<tagName>.+?)___\$/gm);
+      // Parse all tags
+
+      let output: string | number | boolean = await tags.reduce(
+        //@ts-ignore
+        async (prev, t) => {
+          const reducingFormula = (await prev) || this.formula;
+          const tagId = t.trim();
+          let parsedTag;
+
+          if ((tagId.trim() || "").length > 0) {
+            const tag = find(this.tags, (o) => o.identifier === tagId).tag;
+            if (tag.match(/\w*\(.+\)/)) {
+              const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(
+                tag
+              );
+              parsedTag = await this.processFunction(
+                func.groups.fName,
+                func.groups.fArgs,
+                data
+              );
+            } else {
+              parsedTag = data[tag];
+            }
+          }
+
+          if (parsedTag) {
+            return reducingFormula.replace(`$___${tagId}___$`, parsedTag);
+          } else {
+            return reducingFormula;
+          }
+        },
+        tags[0]
+      );
+
+      if (this.outputType === "number") output = parseInt(output);
+      if (this.outputType === "boolean")
+        output = output === "true" ? true : false;
+      resolve(output);
     });
 
-    return output;
-  };
+  processFunction = (fName, fArgs, data: {}) =>
+    new Promise(async (resolve) => {
+      const fArguments = fArgs.split(/,(?![^\(]*\))(?![^\[]*")(?![^\[]*")/gm); // Splits commas, except when they're in brackets or apostrophes
+      const newArguments = await fArguments.reduce(async (prev, curr) => {
+        const output = typeof prev === "string" ? [] : await prev;
+
+        if (curr.match(/\w*\(.+\)/)) {
+          // If one of the arguments contains a (sub) function, resolve that first, using this recurring function
+          // Continue processing once all sub functions are resolved.
+          const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(curr);
+          output.push(
+            await this.processFunction(
+              func.groups.fName,
+              func.groups.fArgs,
+              data
+            )
+          );
+        } else {
+          output.push(curr);
+        }
+        return output;
+      }, fArguments[0]);
+
+      resolve(await functions[fName].execute(newArguments, data));
+    });
 }
