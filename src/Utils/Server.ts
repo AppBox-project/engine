@@ -101,13 +101,22 @@ export default class Server {
                 // Create a new process
                 const newProcess = new Process(automationName, model, models);
                 // Add variables
-                newProcess.addVariable({ required: true, name: "objectId" }); // Store the objectId
+                newProcess.addVariable({
+                  required: true,
+                  key: "modelKey",
+                  name: "Model key",
+                }); // Store the model key
+                newProcess.addVariable({
+                  required: true,
+                  key: "fieldKey",
+                  name: "Field key",
+                }); // Store the model key
                 newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula
                 // Add a step that finds affected objects and then calculates the formula
                 newProcess.addStep(
                   new ProcessStep(
-                    [new ProcessStepCondition("always")], // Always perform this step
-                    [new ProcessStepAction()]
+                    new ProcessStepCondition("always", "executeSteps"), // Always perform this step
+                    [new ProcessStepAction("recalculate_formula")]
                   )
                 );
                 this.processes[automationName] = newProcess;
@@ -142,9 +151,13 @@ export default class Server {
               `data.${dependency.field}` === updateKey // Or we're a field match.
             ) {
               if (dependency.foreign) {
-                console.log(
-                  `Foreign dependency triggered for ${automation.name}, but processes haven't been built yet.`
-                );
+                // Foreign dependency are a tad more complicated and require a process instead of an automation.
+                // When a formula dependency is marked as foreign, we created a process for it during rebuild().
+                // Call it by the same name as the automation.
+                this.processes[automation.name].start({
+                  modelKey: automation.name.split("---")[0],
+                  fieldKey: automation.name.split("---")[1],
+                }); // Start process, given the required arguments
               } else {
                 changeTriggersAutomation = true;
                 automationsToTrigger.push(automation);

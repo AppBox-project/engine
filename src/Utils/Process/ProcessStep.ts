@@ -2,14 +2,11 @@ import { ProcessStepAction } from "./ProcessStepAction";
 import { ProcessStepCondition } from "./ProcessStepCondition";
 
 export class ProcessStep {
-  conditions: ProcessStepCondition[];
+  condition: ProcessStepCondition;
   actions: ProcessStepAction[];
 
-  constructor(
-    conditions: ProcessStepCondition[],
-    actions: ProcessStepAction[]
-  ) {
-    this.conditions = conditions;
+  constructor(condition: ProcessStepCondition, actions: ProcessStepAction[]) {
+    this.condition = condition;
     this.actions = actions;
   }
 }

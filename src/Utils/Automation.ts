@@ -37,7 +37,7 @@ export default class Automation {
   // Trigger actions
   // - Runs actions contained within this automation
   triggerActions = (context: AutomationContext) => {
-    console.log(`${this.name} triggered.`);
+    console.log(`Automation: '${this.name}' triggered.`);
     this.actions.map((action) => {
       switch (action.type) {
         case "formula_calculate":

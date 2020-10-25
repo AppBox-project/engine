@@ -8,6 +8,7 @@ var uniqid = require("uniqid");
 export default class Formula {
   model: ModelType;
   formula: string;
+  originalFormula: string;
   dependencies: { model: string; field: string; foreign: boolean }[] = [];
   tags: { tag: string; identifier: string }[] = [];
   name: string;
@@ -22,6 +23,7 @@ export default class Formula {
     model: ModelType,
     models: DatabaseModel
   ) {
+    this.originalFormula = formula;
     this.formula = formula;
     this.model = model;
     this.name = `${model.key}---${fieldKey}`;
