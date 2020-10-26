@@ -177,6 +177,7 @@ export default class Formula {
     new Promise(async (resolve) => {
       const data = { ...dataObj, TODAY: new Date() };
       const tags = this.formula.split(/\$___(?<tagName>.+?)___\$/gm);
+
       // Parse all tags
       let output: string | number | boolean = await tags.reduce(
         //@ts-ignore
@@ -188,6 +189,7 @@ export default class Formula {
           let parsedTag;
           if ((tagId.trim() || "").length > 0) {
             const tag = find(this.tags, (o) => o.identifier === tagId).tag;
+
             if (tag.match(/\w*\(.+\)/)) {
               const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(
                 tag
@@ -201,7 +203,15 @@ export default class Formula {
                 localContext
               );
             } else {
-              parsedTag = data[tag];
+              if (tag.match(/\./)) {
+                // Locally triggered foreign dependency
+                parsedTag = await this.getForeignFieldFromId(
+                  tag,
+                  context.object
+                );
+              } else {
+                parsedTag = data[tag];
+              }
             }
           }
 
@@ -248,5 +258,28 @@ export default class Formula {
       resolve(
         await functions[fName].execute(newArguments, data, this, context)
       );
+    });
+
+  // Turn a foreign relationship tag into a value
+  getForeignFieldFromId = async (tag: string, data) =>
+    new Promise(async (resolve) => {
+      const models = this.models;
+      const path = tag.split(".");
+      let nextObject = data;
+      //@ts-ignore
+      await path.reduce(async function (prev, curr) {
+        let totalPath = (await prev) || "";
+        if (curr.match("_r")) {
+          const fieldName = curr.substr(0, curr.length - 2);
+          const nextId = nextObject.data[fieldName];
+          nextObject = await models.objects.model.findOne({
+            _id: nextId,
+          });
+        } else {
+          totalPath += `.${curr}`;
+          resolve(nextObject.data[curr]);
+        }
+        return totalPath;
+      }, path[0]);
     });
 }

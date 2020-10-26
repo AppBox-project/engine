@@ -155,7 +155,8 @@ export default class Server {
           map(context.change, (updateValue, updateKey) => {
             if (
               dependency.field === "__ANY" || // Any field within this model triggers calculation
-              `data.${dependency.field}` === updateKey // Or we're a field match.
+              `data.${dependency.field}` === updateKey || // Or we're a field match.
+              dependency.field === updateKey // This is for inserts
             ) {
               if (dependency.foreign) {
                 // Foreign dependency are a tad more complicated and require a process instead of an automation.

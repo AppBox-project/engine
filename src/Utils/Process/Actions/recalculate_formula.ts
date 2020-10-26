@@ -44,23 +44,10 @@ export default (instance: ProcessInstance) =>
       //@ts-ignore
       await formula.tags.reduce(async (prev, tag) => {
         if (tag.tag.match(/_r\./)) {
-          const path = tag.tag.split(".");
-          let nextObject = data;
-          //@ts-ignore
-          await path.reduce(async function (prev, curr) {
-            let totalPath = (await prev) || "";
-            if (curr.match("_r")) {
-              const fieldName = curr.substr(0, curr.length - 2);
-              const nextId = nextObject.data[fieldName];
-              nextObject = await models.objects.model.findOne({
-                _id: nextId,
-              });
-            } else {
-              totalPath += `.${curr}`;
-              data.data[totalPath] = nextObject.data[curr];
-            }
-            return totalPath;
-          }, path[0]);
+          data.data[tag.tag] = await formula.getForeignFieldFromId(
+            tag.tag,
+            data
+          );
         }
         return data;
       }, formula.tags[0]);

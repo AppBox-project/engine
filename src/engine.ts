@@ -18,16 +18,26 @@ server.whenReady.then(() => {
 
     // React to changes.
     server.models.objects.stream.on("change", async (dbAction) => {
+      let context;
       switch (dbAction.operationType) {
         case "update":
           const object = await server.models.objects.model.findOne({
             _id: dbAction.documentKey._id.toString(),
           });
-          const context = {
+          context = {
             server,
             object,
             dbAction,
             change: dbAction.updateDescription.updatedFields,
+          };
+          server.onReceiveUpdate(context);
+          break;
+        case "insert":
+          context = {
+            server,
+            object: dbAction.fullDocument,
+            dbAction,
+            change: dbAction.fullDocument.data,
           };
           server.onReceiveUpdate(context);
           break;
