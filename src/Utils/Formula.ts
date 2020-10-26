@@ -1,4 +1,4 @@
-import { ModelType, ObjectType } from "./Types";
+import { AutomationContext, ModelType, ObjectType } from "./Types";
 import DatabaseModel from "./Classes/DatabaseModel";
 import functions from "./Formulas/Functions";
 import { find } from "lodash";
@@ -173,29 +173,32 @@ export default class Formula {
     });
 
   // Use all the information available in this class after compilation and compile it
-  calculate = async (dataObj: {}) =>
+  calculate = async (dataObj: {}, context: AutomationContext) =>
     new Promise(async (resolve) => {
       const data = { ...dataObj, TODAY: new Date() };
       const tags = this.formula.split(/\$___(?<tagName>.+?)___\$/gm);
       // Parse all tags
-
       let output: string | number | boolean = await tags.reduce(
         //@ts-ignore
         async (prev, t) => {
+          const localContext = { ...context }; // Because of the nature of this function and js async behavior we copy the values into a local context
           const reducingFormula = (await prev) || this.formula;
+
           const tagId = t.trim();
           let parsedTag;
-
           if ((tagId.trim() || "").length > 0) {
             const tag = find(this.tags, (o) => o.identifier === tagId).tag;
             if (tag.match(/\w*\(.+\)/)) {
               const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(
                 tag
               );
+
+              //@ts-ignore
               parsedTag = await this.processFunction(
                 func.groups.fName,
                 func.groups.fArgs,
-                data
+                data,
+                localContext
               );
             } else {
               parsedTag = data[tag];
@@ -217,8 +220,9 @@ export default class Formula {
       resolve(output);
     });
 
-  processFunction = (fName, fArgs, data: {}) =>
+  processFunction = (fName, fArgs, data: {}, context: AutomationContext) =>
     new Promise(async (resolve) => {
+      //@ts-ignore
       const fArguments = fArgs.split(/,(?![^\(]*\))(?![^\[]*")(?![^\[]*")/gm); // Splits commas, except when they're in brackets or apostrophes
       const newArguments = await fArguments.reduce(async (prev, curr) => {
         const output = typeof prev === "string" ? [] : await prev;
@@ -231,7 +235,8 @@ export default class Formula {
             await this.processFunction(
               func.groups.fName,
               func.groups.fArgs,
-              data
+              data,
+              context
             )
           );
         } else {
@@ -240,6 +245,8 @@ export default class Formula {
         return output;
       }, fArguments[0]);
 
-      resolve(await functions[fName].execute(newArguments, data));
+      resolve(
+        await functions[fName].execute(newArguments, data, this, context)
+      );
     });
 }

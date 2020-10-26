@@ -111,6 +111,13 @@ export default class Server {
                   key: "fieldKey",
                   name: "Field key",
                 }); // Store the model key
+                // Add variables
+                newProcess.addVariable({
+                  required: true,
+                  key: "context",
+                  name: "Context",
+                }); // Store the context
+
                 newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula
                 // Add a step that finds affected objects and then calculates the formula
                 newProcess.addStep(
@@ -157,6 +164,7 @@ export default class Server {
                 this.processes[automation.name].start({
                   modelKey: automation.name.split("---")[0],
                   fieldKey: automation.name.split("---")[1],
+                  context,
                 }); // Start process, given the required arguments
               } else {
                 changeTriggersAutomation = true;

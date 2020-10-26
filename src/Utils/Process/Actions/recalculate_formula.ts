@@ -3,6 +3,8 @@ import Formula from "../../Formula";
 import { ProcessInstance } from "../ProcessInstance";
 import { set } from "lodash";
 import DatabaseModel from "../../Classes/DatabaseModel";
+import { AutomationContext } from "../../Types";
+import { isContext } from "vm";
 
 /* * *
  * recalculate_formula
@@ -17,7 +19,7 @@ export default (instance: ProcessInstance) =>
     const vars: vars = instance.variables;
 
     // Exit if variables are missing
-    if (!vars.modelKey || !vars.fieldKey) {
+    if (!vars.modelKey || !vars.fieldKey || !vars.context) {
       console.log(
         `Formula compilation action failed. Some variables were missing.`,
         vars
@@ -35,7 +37,8 @@ export default (instance: ProcessInstance) =>
       objectId: vars.modelKey,
     });
     objects.reduce(async (prev, object) => {
-      const data = object;
+      const data = await object;
+
       // Step 2: compile formula
       // Follow relationships
       //@ts-ignore
@@ -65,13 +68,15 @@ export default (instance: ProcessInstance) =>
       // Created complete object
       // Calculate and save
       const fieldName = formula.name.split("---")[1];
-      object.data[fieldName] = await formula.calculate(data.data);
+      vars.context.object = data;
+      object.data[fieldName] = await formula.calculate(data.data, vars.context);
       object.markModified(`data.${fieldName}`);
-      object.save();
+      return await object.save();
     }, objects[0]);
   });
 
 interface vars {
   modelKey?: string;
   fieldKey?: string;
+  context?: AutomationContext;
 }

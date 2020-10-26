@@ -1,4 +1,5 @@
 import { differenceInYears, parseISO } from "date-fns";
+import Formula from "../../Formula";
 
 /*
  * differenceInYears(left, right)
@@ -9,7 +10,7 @@ import { differenceInYears, parseISO } from "date-fns";
  * Calculates the difference between left and right according to date-fns.
  */
 export default {
-  execute: (fArgs, data) =>
+  execute: (fArgs, data, formula: Formula) =>
     new Promise((resolve) => {
       const left =
         typeof data[fArgs[0].trim()] === "string"
