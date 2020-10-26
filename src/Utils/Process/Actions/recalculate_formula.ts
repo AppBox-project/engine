@@ -1,7 +1,7 @@
 import Automation from "../../Automation";
 import Formula from "../../Formula";
 import { ProcessInstance } from "../ProcessInstance";
-import { set, get } from "lodash";
+import { set } from "lodash";
 import DatabaseModel from "../../Classes/DatabaseModel";
 
 /* * *
@@ -34,23 +34,41 @@ export default (instance: ProcessInstance) =>
     const objects = await models.objects.model.find({
       objectId: vars.modelKey,
     });
-    objects.map((object) => {
-      const data = object.data;
+    objects.reduce(async (prev, object) => {
+      const data = object;
       // Step 2: compile formula
-      formula.tags.map((tag) => {
+      // Follow relationships
+      //@ts-ignore
+      await formula.tags.reduce(async (prev, tag) => {
         if (tag.tag.match(/_r\./)) {
           const path = tag.tag.split(".");
-          let totalPath = "";
+          let nextObject = data;
           //@ts-ignore
-          path.reduce(async function (prev, curr) {
+          await path.reduce(async function (prev, curr) {
+            let totalPath = (await prev) || "";
             if (curr.match("_r")) {
-              console.log(totalPath);
+              const fieldName = curr.substr(0, curr.length - 2);
+              const nextId = nextObject.data[fieldName];
+              nextObject = await models.objects.model.findOne({
+                _id: nextId,
+              });
+            } else {
+              totalPath += `.${curr}`;
+              data.data[totalPath] = nextObject.data[curr];
             }
-            return curr;
+            return totalPath;
           }, path[0]);
         }
-      });
-    });
+        return data;
+      }, formula.tags[0]);
+
+      // Created complete object
+      // Calculate and save
+      const fieldName = formula.name.split("---")[1];
+      object.data[fieldName] = await formula.calculate(data.data);
+      object.markModified(`data.${fieldName}`);
+      object.save();
+    }, objects[0]);
   });
 
 interface vars {
