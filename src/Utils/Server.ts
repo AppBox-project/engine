@@ -241,9 +241,9 @@ export default class Server {
   };
 
   compileCronTriggers = () => {
-    map(this.timeTriggers, (processIds, key) => {
-      cron.schedule("* * * * *", () => {
-        console.log(`CRON rule ${key} has triggered.`);
+    map(this.timeTriggers, (processIds, cronString) => {
+      cron.schedule(cronString, () => {
+        console.log(`CRON rule ${cronString} has triggered.`);
 
         processIds.map((processId) => {
           const process = this.processes[processId];
