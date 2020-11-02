@@ -5,7 +5,7 @@
     "@types/node": "^14.14.6",
     "concurrently": "^5.3.0",
     "lodash": "^4.17.20",
-    "mongoose": "^5.10.9",
+    "mongoose": "^5.10.11",
     "node-cron": "^2.0.3",
     "nunjucks": "^3.2.2",
     "ts-node": "^9.0.0",
