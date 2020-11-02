@@ -87,7 +87,10 @@ export class ProcessInstance {
   executeAction = (action: ProcessStepAction) => {
     switch (action.type) {
       case "recalculate_formula":
-        actions.recalculate_formula(this);
+        actions.recalculate_formula(this, action);
+        break;
+      case "AddObject":
+        actions.AddObject(this, action);
         break;
       default:
         console.log(`Unknown step action: ${action.type}`);

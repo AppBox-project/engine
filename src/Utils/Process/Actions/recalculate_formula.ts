@@ -5,6 +5,7 @@ import { set } from "lodash";
 import DatabaseModel from "../../Classes/DatabaseModel";
 import { AutomationContext } from "../../Types";
 import { isContext } from "vm";
+import { ProcessStepAction } from "../ProcessStepAction";
 
 /* * *
  * recalculate_formula
@@ -14,7 +15,7 @@ import { isContext } from "vm";
  * TODO: improve detection so only relevant formulas get recalculated.
  */
 
-export default (instance: ProcessInstance) =>
+export default (instance: ProcessInstance, action: ProcessStepAction) =>
   new Promise(async (resolve) => {
     const vars: vars = instance.variables;
 

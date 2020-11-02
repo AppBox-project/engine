@@ -6,6 +6,9 @@ import Process from "./Process";
 import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
+import { filter } from "lodash";
+var cron = require("node-cron");
+
 var mongoose = require("mongoose");
 
 /* * * SERVER * * *
@@ -60,16 +63,19 @@ export default class Server {
       this.timeTriggers = {};
 
       // Perform all tasks
-      Promise.all([this.compileFormulas()]).then(() => {
-        resolve();
-      });
+      Promise.all([this.compileFormulas(), this.compileProcesses()]).then(
+        () => {
+          this.compileCronTriggers();
+          resolve();
+        }
+      );
     });
 
   // Compile formulas
   // --> Get all formula fields and compile them
   compileFormulas = () =>
     new Promise(async (resolve) => {
-      console.log("--> Compiling formulas...");
+      console.log("--> 🧪 Compiling formulas...");
 
       const models = await this.models.models.model.find();
       await models.reduce(async (prev, model) => {
@@ -99,7 +105,7 @@ export default class Server {
             newAutomation.formula.dependencies.map((dep) => {
               if (dep.foreign) {
                 // Create a new process
-                const newProcess = new Process(automationName, model, models);
+                const newProcess = new Process(automationName, models);
                 // Add variables
                 newProcess.addVariable({
                   required: true,
@@ -143,6 +149,56 @@ export default class Server {
       }, 1000);
     });
 
+  // Compile processes
+  // --> Load all system-automations with type process and turn them into processes for engine
+  compileProcesses = () =>
+    new Promise(async (resolve) => {
+      const processes = await this.models.objects.model.find({
+        objectId: "system-automations",
+        "data.type": "Process",
+      });
+
+      console.log(
+        `--> 🖥 Compiling ${processes.length} ${
+          processes.length === 1 ? "process" : "processes"
+        }.`
+      );
+      await processes.reduce((process, prev) => {
+        console.log(`--> 🖥 Compiling '${process.data.name}'.`);
+        const newProcess = new Process(process.data.name, this.models);
+        process.data.data.triggers.map((trigger) => {
+          switch (trigger.type) {
+            case "cron":
+              if (!this.timeTriggers[trigger.args.cron])
+                this.timeTriggers[trigger.args.cron] = [];
+              this.timeTriggers[trigger.args.cron].push(newProcess.id);
+              break;
+            default:
+              console.log(`Unknown trigger type ${trigger.type}`);
+              break;
+          }
+        });
+        process.data.data.steps.map((step) => {
+          const condition = new ProcessStepCondition(
+            step.condition.conditions[0].type, // Todo: multiple conditions need to be processed seperately
+            step.condition.conditions.actionIfTrue,
+            step.condition.conditions.actionIfFalse
+          );
+          const actions: ProcessStepAction[] = [];
+          step.actions.map((action) => {
+            actions.push(
+              new ProcessStepAction(action.type, action.args, action.name)
+            );
+          });
+          newProcess.addStep(new ProcessStep(condition, actions));
+        });
+        this.processes[newProcess.id] = newProcess;
+        return newProcess;
+      }, processes[0]);
+
+      resolve();
+    });
+
   // Process update
   // This function is called every time an object is updated or created.
   // It checks the change to see if it triggers an automation. If so, it executes it.
@@ -182,5 +238,19 @@ export default class Server {
         automation.triggerActions(context);
       });
     }
+  };
+
+  compileCronTriggers = () => {
+    map(this.timeTriggers, (processIds, key) => {
+      cron.schedule("* * * * *", () => {
+        console.log(`CRON rule ${key} has triggered.`);
+
+        processIds.map((processId) => {
+          const process = this.processes[processId];
+          console.log(`🖥 Process '${process.name}' has triggered (time).`);
+          process.start({});
+        });
+      });
+    });
   };
 }

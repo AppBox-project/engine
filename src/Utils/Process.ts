@@ -1,7 +1,7 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import { ProcessInstance } from "./Process/ProcessInstance";
 import { ProcessStep } from "./Process/ProcessStep";
-import { ModelType } from "./Types";
+const uniqid = require("uniqid");
 
 /* * * Process * * *
  * Processes are the more complex form of automations.
@@ -17,17 +17,17 @@ interface variableMeta {
 
 export default class Process {
   name: string;
-  model: ModelType;
   models: DatabaseModel;
   steps: ProcessStep[] = [];
   variables: variableMeta[] = []; // Execution variables are set per execution. Therefore this array contains it's meta information.
   processVariables = {}; // Process variables store values that are the same for all executions.
   instances: { [id: string]: ProcessInstance } = {};
+  id: string;
 
-  constructor(name: string, model: ModelType, models: DatabaseModel) {
+  constructor(name: string, models: DatabaseModel) {
     this.name = name;
-    this.model = model;
     this.models = models;
+    this.id = uniqid();
   }
 
   addStep = (step: ProcessStep) => {
