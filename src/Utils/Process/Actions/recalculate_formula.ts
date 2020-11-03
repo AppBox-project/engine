@@ -61,6 +61,7 @@ export default (instance: ProcessInstance, action: ProcessStepAction) =>
       object.markModified(`data.${fieldName}`);
       return await object.save();
     }, objects[0]);
+    resolve();
   });
 
 interface vars {

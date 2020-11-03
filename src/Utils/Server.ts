@@ -156,15 +156,17 @@ export default class Server {
       const processes = await this.models.objects.model.find({
         objectId: "system-automations",
         "data.type": "Process",
+        "data.active": true,
       });
 
       console.log(
-        `--> 🖥 Compiling ${processes.length} ${
+        `--> 👨‍💻 Compiling ${processes.length} ${
           processes.length === 1 ? "process" : "processes"
         }.`
       );
-      await processes.reduce((process, prev) => {
-        console.log(`--> 🖥 Compiling '${process.data.name}'.`);
+
+      await processes.reduce((prev, process) => {
+        console.log(`--> 👨‍💻 Compiling '${process.data.name}'.`);
         const newProcess = new Process(process.data.name, this.models);
         process.data.data.triggers.map((trigger) => {
           switch (trigger.type) {
@@ -193,7 +195,7 @@ export default class Server {
           newProcess.addStep(new ProcessStep(condition, actions));
         });
         this.processes[newProcess.id] = newProcess;
-        return newProcess;
+        return true;
       }, processes[0]);
 
       resolve();
@@ -247,7 +249,7 @@ export default class Server {
 
         processIds.map((processId) => {
           const process = this.processes[processId];
-          console.log(`🖥 Process '${process.name}' has triggered (time).`);
+          console.log(`👨‍💻 Process '${process.name}' has triggered (time).`);
           process.start({});
         });
       });

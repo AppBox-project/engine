@@ -14,4 +14,5 @@ export default (instance: ProcessInstance, action: ProcessStepAction) =>
       data: args.object,
     });
     await newObject.save();
+    resolve();
   });

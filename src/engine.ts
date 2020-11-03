@@ -41,8 +41,11 @@ server.whenReady.then(() => {
           };
           server.onReceiveUpdate(context);
           break;
+        case "delete":
+          // Todo, case is here to prevent errors
+          break;
         default:
-          console.log(`Unknown change operation: ${dbAction.operationType}`);
+          console.error(`Unknown change operation: ${dbAction.operationType}`);
           break;
       }
     });

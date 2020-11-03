@@ -1,4 +1,8 @@
-type ActionType = "recalculate_formula" | "AddObject";
+type ActionType =
+  | "recalculate_formula"
+  | "AddObject"
+  | "DeleteObjects"
+  | "wait";
 
 export class ProcessStepAction {
   type: ActionType;

@@ -45,11 +45,7 @@ export class ProcessInstance {
     } else {
       // Everything is fine.
       this.variables = { ...this.variables, ...vars };
-      this.process.steps.reduce(
-        //@ts-ignore
-        async (prev, curr) => await this.evaluateStep(await curr),
-        this.process.steps[0]
-      );
+      this.evaluateStep(this.process.steps[0]);
     }
   }
 
@@ -76,25 +72,34 @@ export class ProcessInstance {
 
   // executeStep(step)
   // --> Executes a step's actions
-  executeStep = (step: ProcessStep) => {
-    step.actions.reduce(
+  executeStep = async (step: ProcessStep) => {
+    await step.actions.reduce(
       //@ts-ignore
-      async (prev, curr) => await this.executeAction(await curr),
+      async (prev, curr) => {
+        await prev;
+        return await this.executeAction(await curr);
+      },
       step.actions[0]
     );
   };
 
-  executeAction = (action: ProcessStepAction) => {
-    switch (action.type) {
-      case "recalculate_formula":
-        actions.recalculate_formula(this, action);
-        break;
-      case "AddObject":
-        actions.AddObject(this, action);
-        break;
-      default:
-        console.log(`Unknown step action: ${action.type}`);
-        break;
-    }
-  };
+  executeAction = (action: ProcessStepAction) =>
+    new Promise(async (resolve, reject) => {
+      if (action.type === "recalculate_formula") {
+        await actions.recalculate_formula(this, action);
+        resolve();
+      } else if (action.type === "AddObject") {
+        await actions.AddObject(this, action);
+        resolve();
+      } else if (action.type === "wait") {
+        await actions.Wait(this, action);
+        resolve();
+      } else if (action.type === "DeleteObjects") {
+        await actions.DeleteObjects(this, action);
+        resolve();
+      } else {
+        console.error(`Unknown step action: ${action.type}`);
+        resolve();
+      }
+    });
 }
