@@ -27,7 +27,7 @@ export default class Automation {
   // - This function compiles the formula
   compileFormula = (formula: string, fieldKey: string) =>
     new Promise(async (resolve) => {
-      this.formula = new Formula(formula, fieldKey, this.model, this.models);
+      this.formula = new Formula(formula, this.model, this.models, this.name);
       await this.formula.compile();
       this.actions.push({ type: "formula_calculate" });
       this.dependencies = this.formula.dependencies;

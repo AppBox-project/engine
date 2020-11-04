@@ -1,6 +1,7 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import { ProcessInstance } from "./Process/ProcessInstance";
 import { ProcessStep } from "./Process/ProcessStep";
+import Server from "./Server";
 const uniqid = require("uniqid");
 
 /* * * Process * * *
@@ -23,11 +24,13 @@ export default class Process {
   processVariables = {}; // Process variables store values that are the same for all executions.
   instances: { [id: string]: ProcessInstance } = {};
   id: string;
+  server: Server;
 
-  constructor(name: string, models: DatabaseModel) {
+  constructor(name: string, models: DatabaseModel, server: Server) {
     this.name = name;
     this.models = models;
     this.id = uniqid();
+    this.server = server;
   }
 
   addStep = (step: ProcessStep) => {

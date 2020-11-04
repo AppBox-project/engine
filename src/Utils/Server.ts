@@ -6,7 +6,6 @@ import Process from "./Process";
 import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
-import { filter } from "lodash";
 var cron = require("node-cron");
 
 var mongoose = require("mongoose");
@@ -105,7 +104,7 @@ export default class Server {
             newAutomation.formula.dependencies.map((dep) => {
               if (dep.foreign) {
                 // Create a new process
-                const newProcess = new Process(automationName, models);
+                const newProcess = new Process(automationName, models, this);
                 // Add variables
                 newProcess.addVariable({
                   required: true,
@@ -167,7 +166,7 @@ export default class Server {
 
       await processes.reduce((prev, process) => {
         console.log(`--> 👨‍💻 Compiling '${process.data.name}'.`);
-        const newProcess = new Process(process.data.name, this.models);
+        const newProcess = new Process(process.data.name, this.models, this);
         process.data.data.triggers.map((trigger) => {
           switch (trigger.type) {
             case "cron":

@@ -1,4 +1,4 @@
-import { AutomationContext } from "../../Types";
+import { AutomationContext, FormulaContext } from "../../Types";
 import Formula from "../../Formula";
 
 /*
@@ -11,23 +11,34 @@ import Formula from "../../Formula";
  */
 
 export default {
-  execute: (fArgs, data, formula: Formula, context: AutomationContext) =>
-    new Promise(async (resolve) => {
-      const modelKey = fArgs[0].substr(1, fArgs[0].length - 2);
-      const fieldKey = fArgs[1].substr(1, fArgs[1].length - 2);
-      const criteria = {};
+  execute: (
+    fArgs,
+    data,
+    formula: Formula,
+    context: AutomationContext | FormulaContext
+  ) =>
+    new Promise(async (resolve, reject) => {
+      //@ts-ignore
+      if (!context.object) {
+        reject("This formula is ran without object context ");
+      } else {
+        const modelKey = fArgs[0].substr(1, fArgs[0].length - 2);
+        const fieldKey = fArgs[1].substr(1, fArgs[1].length - 2);
+        const criteria = {};
 
-      JSON.parse(fArgs[2]).map(
-        (crit) => (criteria[`data.${crit.field}`] = crit.value)
-      );
+        JSON.parse(fArgs[2]).map(
+          (crit) => (criteria[`data.${crit.field}`] = crit.value)
+        );
 
-      const result = await formula.models.objects.model.countDocuments({
-        objectId: modelKey,
-        [`data.${fieldKey}`]: context.object._id.toString(),
-        ...criteria,
-      });
+        const result = await formula.models.objects.model.countDocuments({
+          objectId: modelKey,
+          //@ts-ignore
+          [`data.${fieldKey}`]: context.object._id.toString(),
+          ...criteria,
+        });
 
-      resolve(result || 0);
+        resolve(result || 0);
+      }
     }),
   onCompile: (fArguments) => {
     // Add a foreign relationship to the field key and add an additional field for each requirement ([2])

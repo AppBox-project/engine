@@ -1,7 +1,13 @@
-import { AutomationContext, ModelType, ObjectType } from "./Types";
+import {
+  AutomationContext,
+  FormulaContext,
+  ModelType,
+  ObjectType,
+} from "./Types";
 import DatabaseModel from "./Classes/DatabaseModel";
 import functions from "./Formulas/Functions";
 import { find } from "lodash";
+import { rejects } from "assert";
 
 var uniqid = require("uniqid");
 
@@ -16,17 +22,18 @@ export default class Formula {
   models: DatabaseModel;
   functions: { fName; fArgs }[] = [];
   outputType: "text" | "number" | "boolean" | "picture" = "text";
+  systemVars = { __TODAY: new Date() };
 
   constructor(
     formula: string,
-    fieldKey: string,
     model: ModelType,
-    models: DatabaseModel
+    models: DatabaseModel,
+    name: string
   ) {
     this.originalFormula = formula;
     this.formula = formula;
     this.model = model;
-    this.name = `${model.key}---${fieldKey}`;
+    this.name = name;
     this.modelCache[model.key] = model;
     this.models = models;
   }
@@ -160,11 +167,14 @@ export default class Formula {
       const deps = functions[fName].onCompile(newArguments);
       deps.map((dep) => {
         if (typeof dep === "string") {
-          this.dependencies.push({
-            model: this.model.key,
-            field: dep.trim(),
-            foreign: false,
-          });
+          // Check if one of the dependencies returned is a systemVar. These won't be marked as dependency but will get a value.
+          if (!Object.keys(this.systemVars).includes(dep)) {
+            this.dependencies.push({
+              model: this.model.key,
+              field: dep.trim(),
+              foreign: false,
+            });
+          }
         } else {
           this.dependencies.push(dep);
         }
@@ -172,20 +182,27 @@ export default class Formula {
       resolve();
     });
 
-  // Use all the information available in this class after compilation and compile it
-  calculate = async (dataObj: {}, context: AutomationContext) =>
-    new Promise(async (resolve) => {
+  // Use all the information available in this class after compilation and calculate it
+  calculate = async (
+    dataObj: {},
+    context: AutomationContext | FormulaContext
+  ) =>
+    new Promise(async (resolve, reject) => {
       const data = { ...dataObj, TODAY: new Date() };
-      const tags = this.formula.split(/\$___(?<tagName>.+?)___\$/gm);
+      const regex = /\$___(?<tagName>.+?)___\$/gm;
+      let r;
+      const tags = [];
+      while ((r = regex.exec(this.formula)) !== null) {
+        tags.push(r.groups.tagName);
+      }
 
       // Parse all tags
       let output: string | number | boolean = await tags.reduce(
         //@ts-ignore
-        async (prev, t) => {
+        async (prev, tagId) => {
           const localContext = { ...context }; // Because of the nature of this function and js async behavior we copy the values into a local context
-          const reducingFormula = (await prev) || this.formula;
+          const reducingFormula = prev === tags[0] ? this.formula : await prev;
 
-          const tagId = t.trim();
           let parsedTag;
           if ((tagId.trim() || "").length > 0) {
             const tag = find(this.tags, (o) => o.identifier === tagId).tag;
@@ -204,11 +221,19 @@ export default class Formula {
               );
             } else {
               if (tag.match(/\./)) {
-                // Locally triggered foreign dependency
-                parsedTag = await this.getForeignFieldFromId(
-                  tag,
-                  context.object
-                );
+                //@ts-ignore
+                if (!context.object) {
+                  // To follow relationships we need values, and therefore we need a context object.
+                  reject(
+                    "Can't use foreign relationships in a contextless formula execution."
+                  );
+                } else {
+                  // Locally triggered foreign dependency
+                  parsedTag = await this.getForeignFieldFromId(
+                    tag, //@ts-ignore
+                    context.object
+                  );
+                }
               } else {
                 parsedTag = data[tag];
               }
@@ -224,23 +249,33 @@ export default class Formula {
         tags[0]
       );
 
+      //@ts-ignore
       if (this.outputType === "number") output = parseInt(output);
       if (this.outputType === "boolean")
+        //@ts-ignore
         output = output === "true" ? true : false;
       resolve(output);
     });
 
-  processFunction = (fName, fArgs, data: {}, context: AutomationContext) =>
+  processFunction = (
+    fName,
+    fArgs,
+    data: {},
+    context: AutomationContext | FormulaContext
+  ) =>
     new Promise(async (resolve) => {
       //@ts-ignore
       const fArguments = fArgs.split(/,(?![^\(]*\))(?![^\[]*")(?![^\[]*")/gm); // Splits commas, except when they're in brackets or apostrophes
       const newArguments = await fArguments.reduce(async (prev, curr) => {
         const output = typeof prev === "string" ? [] : await prev;
+        let variable = curr.trim().replace(/^['"]|['"]$/g, ""); // Remove spaces and trailing apostrophes
 
-        if (curr.match(/\w*\(.+\)/)) {
+        if (variable.match(/\w*\(.+\)/)) {
           // If one of the arguments contains a (sub) function, resolve that first, using this recurring function
           // Continue processing once all sub functions are resolved.
-          const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(curr);
+          const func = new RegExp(/(?<fName>\w*)\((?<fArgs>.*)\)/gm).exec(
+            variable
+          );
           output.push(
             await this.processFunction(
               func.groups.fName,
@@ -250,7 +285,11 @@ export default class Formula {
             )
           );
         } else {
-          output.push(curr);
+          // Change systemVars (__TODAY) by their respective values.
+          if (Object.keys(this.systemVars).includes(variable)) {
+            variable = this.systemVars[variable];
+          }
+          output.push(variable);
         }
         return output;
       }, fArguments[0]);

@@ -111,3 +111,7 @@ export interface AutomationContext {
   dbAction;
   change;
 }
+
+export interface FormulaContext {
+  server: Server;
+}
