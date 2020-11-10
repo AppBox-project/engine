@@ -6,6 +6,8 @@ import Process from "./Process";
 import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
+import Task from "../Tasks";
+
 var cron = require("node-cron");
 
 var mongoose = require("mongoose");
@@ -43,6 +45,16 @@ export default class Server {
       db.once("open", function () {
         console.log("...Database connected.");
         that.models = new DatabaseModel(db);
+
+        // React to tasks that target engines.
+        that.models.objects.stream.on("change", (change) => {
+          if (change.fullDocument.data.target === "Engine") {
+            const databaseTask = change.fullDocument;
+            const task = new Task(databaseTask);
+            task.execute();
+          }
+        });
+
         resolve();
       });
     });
