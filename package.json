@@ -1,7 +1,5 @@
 {
   "dependencies": {
-
-    "@types/mongoose": "^5.7.37",
     "@types/mongoose": "^5.7.36",
     "@types/node": "^14.14.6",
     "concurrently": "^5.3.0",
@@ -14,6 +12,9 @@
     "typescript": "^4.0.5",
     "uniqid": "^5.2.0"
   },
+  "devDependencies": {
+    "nodemon": "^2.0.6"
+  },
   "name": "appbox-engine",
   "version": "0.0.1",
   "description": "Engine for AppBox",
@@ -23,9 +24,8 @@
   "scripts": {
     "startLocal": "set \"dbUrl=localhost:27017\" && yarn start",
     "build": "tsc",
-    "develop": "yarn build && node dist/engine.js",
+    "develop": "nodemon src/engine.ts",
     "start": "concurrently -k -p \"[{name}]\" -n \"TypeScript, Node\" -c \"yello.bold, cyan.bold\"  \"yarn run watch-ts\" \"yarn run watch-node\"",
     "test": "mocha -r ts-node/register src/**/*.spec.ts"
-  },
-  "devDependencies": {}
+  }
 }

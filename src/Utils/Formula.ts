@@ -249,8 +249,9 @@ export default class Formula {
         tags[0]
       );
 
-      //@ts-ignore
-      if (this.outputType === "number") output = parseInt(output);
+      if (this.outputType === "number")
+        //@ts-ignore
+        output = !isNaN(output) ? parseInt(output) : 0;
       if (this.outputType === "boolean")
         //@ts-ignore
         output = output === "true" ? true : false;
@@ -293,7 +294,6 @@ export default class Formula {
         }
         return output;
       }, fArguments[0]);
-
       resolve(
         await functions[fName].execute(newArguments, data, this, context)
       );

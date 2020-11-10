@@ -22,8 +22,8 @@ export default {
       if (!context.object) {
         reject("This formula is ran without object context ");
       } else {
-        const modelKey = fArgs[0].substr(1, fArgs[0].length - 2);
-        const fieldKey = fArgs[1].substr(1, fArgs[1].length - 2);
+        const modelKey = fArgs[0];
+        const fieldKey = fArgs[1];
         const criteria = {};
 
         JSON.parse(fArgs[2]).map(
@@ -36,8 +36,7 @@ export default {
           [`data.${fieldKey}`]: context.object._id.toString(),
           ...criteria,
         });
-
-        resolve(result || 0);
+        resolve(result);
       }
     }),
   onCompile: (fArguments) => {
