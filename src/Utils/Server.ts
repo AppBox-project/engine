@@ -48,10 +48,14 @@ export default class Server {
 
         // React to tasks that target engines.
         that.models.objects.stream.on("change", (change) => {
-          if (change.fullDocument.data.target === "Engine") {
-            const databaseTask = change.fullDocument;
-            const task = new Task(databaseTask);
-            task.execute();
+          if (change.operationType === "insert") {
+            if (change.fullDocument.objectId === "system-task") {
+              if (change.fullDocument.data.target === "Engine") {
+                const databaseTask = change.fullDocument;
+                const task = new Task(databaseTask);
+                task.execute();
+              }
+            }
           }
         });
 
