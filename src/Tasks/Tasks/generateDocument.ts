@@ -30,11 +30,9 @@ export default (task: Task) =>
     const dir = `/AppBox/Files/Objects/${model.key}/${object._id}`;
     const filename = `${template.data["filename-prefix"]}-${uniqid()}.pdf`;
     fs.mkdirSync(dir, { recursive: true });
-
     pdf
       .create(html, { format: "Letter" })
       .toFile(`${dir}/${filename}`, (err, res) => {});
-
     task.models.attachments.model.create({
       objectId: object._id,
       path: `${dir}/${filename}`,
