@@ -1,13 +1,7 @@
-import {
-  AutomationContext,
-  FormulaContext,
-  ModelType,
-  ObjectType,
-} from "./Types";
+import { AutomationContext, FormulaContext, ModelType } from "./Types";
 import DatabaseModel from "./Classes/DatabaseModel";
 import functions from "./Formulas/Functions";
 import { find } from "lodash";
-import { rejects } from "assert";
 
 var uniqid = require("uniqid");
 
@@ -23,7 +17,7 @@ export default class Formula {
   functions: { fName; fArgs }[] = [];
   outputType: "text" | "number" | "boolean" | "picture" = "text";
   systemVars = { __TODAY: new Date() };
-  systemVarTriggers = { __TODAY: { cron: "* * * * *" } };
+  systemVarTriggers = { __TODAY: { cron: "0 0 * * *" } };
   timeTriggers = [];
 
   constructor(
