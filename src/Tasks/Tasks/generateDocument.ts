@@ -1,6 +1,6 @@
 import Formula from "../../Utils/Formula";
 import Task from "..";
-const wkhtmltopdf = require("wkhtmltopdf");
+var pdf = require("html-pdf");
 const fs = require("fs");
 const uniqid = require("uniqid");
 
@@ -31,9 +31,10 @@ export default (task: Task) =>
     const filename = `${template.data["filename-prefix"]}-${uniqid()}.pdf`;
     fs.mkdirSync(dir, { recursive: true });
 
-    wkhtmltopdf(html, { pageSize: "letter" }).pipe(
-      fs.createWriteStream(`${dir}/${filename}`)
-    );
+    pdf
+      .create(html, { format: "Letter" })
+      .toFile(`${dir}/${filename}`, (err, res) => {});
+
     task.models.attachments.model.create({
       objectId: object._id,
       path: `${dir}/${filename}`,
