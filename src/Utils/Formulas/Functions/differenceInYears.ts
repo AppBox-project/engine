@@ -13,7 +13,9 @@ export default {
   execute: (fArgs, data, formula: Formula) =>
     new Promise((resolve) => {
       const left =
-        typeof data[fArgs[0].trim()] === "string"
+        fArgs[0] instanceof Date
+          ? fArgs[0]
+          : data[fArgs[0].trim()] === "string"
           ? parseISO(data[fArgs[0].trim()])
           : data[fArgs[0].trim()];
       const right =

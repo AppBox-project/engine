@@ -23,6 +23,8 @@ export default class Formula {
   functions: { fName; fArgs }[] = [];
   outputType: "text" | "number" | "boolean" | "picture" = "text";
   systemVars = { __TODAY: new Date() };
+  systemVarTriggers = { __TODAY: { cron: "* * * * *" } };
+  timeTriggers = [];
 
   constructor(
     formula: string,
@@ -167,13 +169,19 @@ export default class Formula {
       const deps = functions[fName].onCompile(newArguments);
       deps.map((dep) => {
         if (typeof dep === "string") {
-          // Check if one of the dependencies returned is a systemVar. These won't be marked as dependency but will get a value.
+          // Check if one of the dependencies returned is a systemVar. These still need a value.
           if (!Object.keys(this.systemVars).includes(dep)) {
             this.dependencies.push({
               model: this.model.key,
               field: dep.trim(),
               foreign: false,
             });
+          } else {
+            // This is a system var. Take appropriate action.
+            if ((this.systemVarTriggers[dep] || {}).cron) {
+              // Time based trigger (such as __TODAY)
+              this.timeTriggers.push(this.systemVarTriggers[dep].cron);
+            }
           }
         } else {
           this.dependencies.push(dep);

@@ -117,6 +117,12 @@ export default class Server {
             // After compiling formulas into automations, we take a look if any foreign relations exist.
             // Because of their (relative) complexity, foreign relations require processes
             // At this point we will make those processes.
+
+            // Special deps are variables such as __TODAY that need a specific trigger.
+            // EG: __TODAY needs to fire every day when the day changes.
+
+            // Figure out if a formula is complex enough to require a process
+            let requiresProcess = false;
             newAutomation.formula.dependencies.map((dep) => {
               if (dep.foreign) {
                 // Create a new process
@@ -149,6 +155,42 @@ export default class Server {
                 );
                 this.processes[automationName] = newProcess;
               }
+            });
+
+            // Formulas may have gotten time triggers (such as __TODAY). Create processes for these.
+            newAutomation.formula.timeTriggers.map((timeTrigger) => {
+              // Create a new process
+              const newProcess = new Process(automationName, models, this);
+
+              // Add variables
+              newProcess.addVariable({
+                required: true,
+                key: "modelKey",
+                name: "Model key",
+              }); // Store the model key
+              newProcess.addVariable({
+                required: true,
+                key: "fieldKey",
+                name: "Field key",
+              }); // Store the model key
+              // Add variables
+              newProcess.addVariable({
+                required: true,
+                key: "context",
+                name: "Context",
+              }); // Store the context
+
+              newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula              // Add a step that finds affected objects and then calculates the formula
+              newProcess.addStep(
+                new ProcessStep(
+                  new ProcessStepCondition("always", "executeSteps"), // Always perform this step
+                  [new ProcessStepAction("recalculate_formula")]
+                )
+              );
+              this.processes[automationName] = newProcess;
+              if (!this.timeTriggers[timeTrigger])
+                this.timeTriggers[timeTrigger] = [];
+              this.timeTriggers[timeTrigger].push(automationName);
             });
 
             this.automations[automationName] = newAutomation;
@@ -264,8 +306,18 @@ export default class Server {
 
         processIds.map((processId) => {
           const process = this.processes[processId];
+          const context: AutomationContext = {
+            server: this,
+            change: null,
+            dbAction: null,
+            object: null,
+          };
           console.log(`👨‍💻 Process '${process.name}' has triggered (time).`);
-          process.start({});
+          process.start({
+            modelKey: processId.split("---")[0],
+            fieldKey: processId.split("---")[1],
+            context,
+          });
         });
       });
     });
