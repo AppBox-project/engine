@@ -190,7 +190,7 @@ export default class Formula {
     context: AutomationContext | FormulaContext
   ) =>
     new Promise(async (resolve, reject) => {
-      const data = { ...dataObj, TODAY: new Date() };
+      const data = { ...dataObj, __TODAY: new Date() };
       const regex = /\$___(?<tagName>.+?)___\$/gm;
       let r;
       const tags = [];

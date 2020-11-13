@@ -7,9 +7,7 @@ import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
 import Task from "../Tasks";
-
 var cron = require("node-cron");
-
 var mongoose = require("mongoose");
 
 /* * * SERVER * * *
@@ -52,7 +50,7 @@ export default class Server {
             if (change.fullDocument.objectId === "system-task") {
               if (change.fullDocument.data.target === "Engine") {
                 const databaseTask = change.fullDocument;
-                const task = new Task(databaseTask);
+                const task = new Task(databaseTask, that.models, this);
                 task.execute();
               }
             }
