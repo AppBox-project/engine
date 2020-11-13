@@ -31,9 +31,7 @@ export default (task: Task) =>
     const filename = `${template.data["filename-prefix"]}-${uniqid()}.pdf`;
     fs.mkdirSync(dir, { recursive: true });
 
-    wkhtmltopdf(html, { pageSize: "letter" }).pipe(
-      fs.createWriteStream(`${dir}/${filename}`)
-    );
+    await wkhtmltopdf(html, { pageSize: "letter", output: `${dir}/${filename}` });
     task.models.attachments.model.create({
       objectId: object._id,
       path: `${dir}/${filename}`,
