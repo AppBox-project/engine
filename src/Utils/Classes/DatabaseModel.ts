@@ -1,6 +1,9 @@
+require("../Models/AppPermissions");
+require("../Models/Archive");
+require("../Models/Attachments");
 require("../Models/Models");
 require("../Models/Objects");
-require("../Models/Attachments");
+require("../Models/UserSettings");
 var mongoose = require("mongoose");
 
 export default class DatabaseModel {

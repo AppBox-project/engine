@@ -1,10 +1,8 @@
 import Automation from "../../Automation";
-import Formula from "../../Formula";
+import Formula from "appbox-formulas";
 import { ProcessInstance } from "../ProcessInstance";
-import { set } from "lodash";
-import DatabaseModel from "../../Classes/DatabaseModel";
+import { DatabaseModel } from "appbox-types";
 import { AutomationContext } from "../../Types";
-import { isContext } from "vm";
 import { ProcessStepAction } from "../ProcessStepAction";
 
 /* * *

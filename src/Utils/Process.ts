@@ -1,4 +1,4 @@
-import DatabaseModel from "./Classes/DatabaseModel";
+import { DatabaseModel } from "appbox-types";
 import { ProcessInstance } from "./Process/ProcessInstance";
 import { ProcessStep } from "./Process/ProcessStep";
 import Server from "./Server";

@@ -1,6 +1,6 @@
 import { ProcessInstance } from "../ProcessInstance";
 import { ProcessStepAction } from "../ProcessStepAction";
-import Formula from "../../Formula";
+import Formula from "appbox-formulas";
 
 // AddObject
 // -> Takes an argument of 'newObject' and will create that object. newObject has model (string) and object (json)

@@ -67,7 +67,7 @@ export default class Server {
   // ---> Compile formulas
   rebuild = async () =>
     new Promise((resolve) => {
-      console.log("--> Rebuilding engine logic.");
+      console.log("--> Indexing engine tasks.");
 
       // Reset variables
       this.automations = {};
@@ -91,6 +91,7 @@ export default class Server {
       console.log("--> 🧪 Compiling formulas...");
 
       const models = await this.models.models.model.find();
+
       await models.reduce(async (prev, model) => {
         const fields = Object.keys(model.fields);
         //@ts-ignore

@@ -1,4 +1,4 @@
-import Formula from "../../Utils/Formula";
+import Formula from "appbox-formulas";
 import Task from "..";
 var pdf = require("html-pdf");
 const fs = require("fs");

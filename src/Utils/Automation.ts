@@ -1,7 +1,8 @@
-import { AutomationContext, ModelType } from "./Types";
-import DatabaseModel from "./Classes/DatabaseModel";
-import Formula from "./Formula";
-import calculate from "./Formulas/Calculate";
+import { AutomationContext } from "./Types";
+import { ModelType } from "appbox-types";
+import DatabaseModel from "appbox-types/dist/Classes/DatabaseModel";
+import Formula from "appbox-formulas";
+import calculate from "appbox-formulas/dist/Formulas/Calculate";
 
 /*
  * * * AUTOMATION * * *

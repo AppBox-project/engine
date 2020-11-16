@@ -1,10 +1,11 @@
 import { error } from "console";
 import Server from "../Utils/Server";
-import DatabaseModel from "../Utils/Classes/DatabaseModel";
-import { ObjectType } from "../Utils/Types";
+import { ObjectType, DatabaseModel } from "appbox-types";
+
 import tasks from "./Tasks";
 
 interface DatabaseTask extends ObjectType {
+  _id;
   data: {
     type: string;
     name: string;
