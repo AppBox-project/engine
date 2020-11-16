@@ -1,7 +1,7 @@
 import DatabaseModel from "./Classes/DatabaseModel";
 import Automation from "./Automation";
 import { map } from "lodash";
-import { AutomationContext } from "./Types";
+import { AutomationContext } from "appbox-formulas/dist/Types";
 import Process from "./Process";
 import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";

@@ -25,7 +25,7 @@ server.whenReady.then(() => {
             _id: dbAction.documentKey._id.toString(),
           });
           context = {
-            server,
+            models: server.models,
             object,
             dbAction,
             change: dbAction.updateDescription.updatedFields,

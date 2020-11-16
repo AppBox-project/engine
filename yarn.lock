@@ -94,19 +94,19 @@ anymatch@~3.1.1:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-appbox-formulas@^0.0.4:
-  version "0.0.4"
-  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.4.tgz#70c13ee045b7814efd98328f8d924ccb3a312c02"
-  integrity sha512-zZUS5OisO4EN0hyeSvfsAEDIxNHH1SDZyc9gRjFiZSfpiG2C+tZ5VUbQ6SQG5PzFHvnxtyCtpE4DZweKJ+tpoQ==
+appbox-formulas@^0.0.24:
+  version "0.0.24"
+  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.24.tgz#4bf61e102b50d59c1b8cd3e5d36575d52a51953a"
+  integrity sha512-CBNoYEiOzVAglE3HwjnVAzdeMICZe1qOYzQ5Z78KpKSSwBW+oNGx3ZdUn7S5RjH6u3GTEc/Ea0xPwlKHfDqLBg==
   dependencies:
     date-fns "^2.16.1"
     lodash "^4.17.20"
     uniqid "^5.2.0"
 
-appbox-types@^0.0.6:
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/appbox-types/-/appbox-types-0.0.6.tgz#305bd3ed54ea2ea0accc5a0f8b5ebfee249878a8"
-  integrity sha512-Wr83QFa39LA/Q0wRS2vaBGMfoYLx6AdAF3eagFG9U8CL5vpFbK2unrldwSlSEISrxb6KjBK64ZwlqPWGOVOcTw==
+appbox-types@^0.0.7:
+  version "0.0.7"
+  resolved "https://registry.yarnpkg.com/appbox-types/-/appbox-types-0.0.7.tgz#df505d76ad10e02d53f1e744daf10f240f4fb4ce"
+  integrity sha512-DtoFkz0BfFQuDg4raEFc1oqxdX6aeV9G4WZYZq2SHIPzEeIxlkalFWdZa+KKlw5GWBmcMCOTKBFxP8kZuJLRNg==
   dependencies:
     mongoose "^5.10.14"
 

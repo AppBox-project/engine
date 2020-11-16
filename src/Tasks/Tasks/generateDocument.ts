@@ -23,7 +23,7 @@ export default (task: Task) =>
     );
     await formula.compile();
     const html = await formula.calculate(object.data, {
-      server: task.server,
+      models: task.models,
     });
 
     // Now that we have HTML, turn it into a PDF.

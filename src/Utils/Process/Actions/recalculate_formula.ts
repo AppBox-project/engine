@@ -2,7 +2,7 @@ import Automation from "../../Automation";
 import Formula from "appbox-formulas";
 import { ProcessInstance } from "../ProcessInstance";
 import { DatabaseModel } from "appbox-types";
-import { AutomationContext } from "../../Types";
+import { AutomationContext } from "appbox-formulas/dist/Types";
 import { ProcessStepAction } from "../ProcessStepAction";
 
 /* * *
