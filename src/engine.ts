@@ -38,6 +38,7 @@ server.whenReady.then(() => {
             object: dbAction.fullDocument,
             dbAction,
             change: dbAction.fullDocument.data,
+            models: server.models,
           };
           server.onReceiveUpdate(context);
           break;

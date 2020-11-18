@@ -44,6 +44,7 @@ export class ProcessInstance {
       this.onDestroy(this.id);
     } else {
       // Everything is fine.
+      console.log(`Process ${this.process.name} triggered.`);
       this.variables = { ...this.variables, ...vars };
       this.evaluateStep(this.process.steps[0]);
     }

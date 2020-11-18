@@ -35,6 +35,7 @@ export default (instance: ProcessInstance, action: ProcessStepAction) =>
     const objects = await models.objects.model.find({
       objectId: vars.modelKey,
     });
+
     objects.reduce(async (prev, object) => {
       const data = await object;
 

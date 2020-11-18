@@ -179,7 +179,8 @@ export default class Server {
                 name: "Context",
               }); // Store the context
 
-              newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula              // Add a step that finds affected objects and then calculates the formula
+              newProcess.processVariables["automation"] = newAutomation; // Store the compiled formula
+              // Add a step that finds affected objects and then calculates the formula
               newProcess.addStep(
                 new ProcessStep(
                   new ProcessStepCondition("always", "executeSteps"), // Always perform this step
