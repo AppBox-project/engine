@@ -85,7 +85,7 @@ export class ProcessInstance {
   };
 
   executeAction = (action: ProcessStepAction) =>
-    new Promise(async (resolve, reject) => {
+    new Promise<void>(async (resolve, reject) => {
       if (action.type === "recalculate_formula") {
         await actions.recalculate_formula(this, action);
         resolve();

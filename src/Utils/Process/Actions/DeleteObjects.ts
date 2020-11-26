@@ -4,7 +4,7 @@ import { ProcessStepAction } from "../ProcessStepAction";
 // DeleteObjects
 // -> Takes an argument of 'DeleteObjects' and will create that object. DeleteObjects has model (string) and object (json)
 export default (instance: ProcessInstance, action: ProcessStepAction) =>
-  new Promise(async (resolve) => {
+  new Promise<void>(async (resolve) => {
     const args = JSON.parse(action.args.DeleteObjects);
     console.log(
       `Instance ${instance.id} (${instance.process.name}) will delete from ${args.model}.`

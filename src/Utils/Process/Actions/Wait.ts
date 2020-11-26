@@ -4,7 +4,7 @@ import { ProcessStepAction } from "../ProcessStepAction";
 // Wait
 // -> Waits for n milliseconds, then resolves
 export default (instance: ProcessInstance, action: ProcessStepAction) =>
-  new Promise(async (resolve) => {
+  new Promise<void>(async (resolve) => {
     console.log(
       `Instance ${instance.id} (${instance.process.name}) is waiting for ${action.args.timeout}ms.`
     );

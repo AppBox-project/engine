@@ -14,7 +14,7 @@ import { ProcessStepAction } from "../ProcessStepAction";
  */
 
 export default (instance: ProcessInstance, action: ProcessStepAction) =>
-  new Promise(async (resolve) => {
+  new Promise<void>(async (resolve) => {
     const vars: vars = instance.variables;
 
     // Exit if variables are missing

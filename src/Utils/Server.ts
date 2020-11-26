@@ -25,7 +25,7 @@ export default class Server {
   // Initialize
   constructor() {
     const that = this;
-    this.whenReady = new Promise((resolve) => {
+    this.whenReady = new Promise<void>((resolve) => {
       console.log("Kickstarting engine...");
 
       // Connect to mongo (required for engine to run)
@@ -66,7 +66,7 @@ export default class Server {
   // --> Perform various tasks.
   // ---> Compile formulas
   rebuild = async () =>
-    new Promise((resolve) => {
+    new Promise<void>((resolve) => {
       console.log("--> Indexing engine tasks.");
 
       // Reset variables
@@ -87,7 +87,7 @@ export default class Server {
   // Compile formulas
   // --> Get all formula fields and compile them
   compileFormulas = () =>
-    new Promise(async (resolve) => {
+    new Promise<void>(async (resolve) => {
       console.log("--> 🧪 Compiling formulas...");
 
       const models = await this.models.models.model.find();
@@ -209,7 +209,7 @@ export default class Server {
   // Compile processes
   // --> Load all system-automations with type process and turn them into processes for engine
   compileProcesses = () =>
-    new Promise(async (resolve) => {
+    new Promise<void>(async (resolve) => {
       const processes = await this.models.objects.model.find({
         objectId: "system-automations",
         "data.type": "Process",

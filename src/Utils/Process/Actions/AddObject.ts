@@ -5,7 +5,7 @@ import Formula from "appbox-formulas";
 // AddObject
 // -> Takes an argument of 'newObject' and will create that object. newObject has model (string) and object (json)
 export default (instance: ProcessInstance, action: ProcessStepAction) =>
-  new Promise(async (resolve) => {
+  new Promise<void>(async (resolve) => {
     const args = JSON.parse(action.args.newObject);
     console.log(
       `Process '${instance.process.name}' inserts into ${args.model}.`
