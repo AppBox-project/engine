@@ -2,7 +2,7 @@
   "dependencies": {
     "appbox-formulas": "^0.0.37",
     "lodash": "^4.17.20",
-    "mongoose": "^5.10.11",
+    "mongoose": "^5.11.3",
     "node-cron": "^2.0.3",
     "nunjucks": "^3.2.2",
     "ts-node": "^9.0.0",
