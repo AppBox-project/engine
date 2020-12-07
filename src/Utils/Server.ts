@@ -30,13 +30,12 @@ export default class Server {
 
       // Connect to mongo (required for engine to run)
       mongoose.connect(
-        `mongodb://${
-          process.env.DBURL ? process.env.DBURL : "192.168.0.2:27017"
-        }/AppBox`,
+        `mongodb://${process.env.DBURL || "localhost:27017"}/AppBox`,
         {
           useNewUrlParser: true,
-          useCreateIndex: true,
-          useUnifiedTopology: true,
+          readPreference: "primary",
+          appName: "AppBox-Server",
+          ssl: false,
         }
       );
       var db = mongoose.connection;
