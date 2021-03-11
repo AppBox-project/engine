@@ -3,7 +3,7 @@
     "appbox-formulas": "^0.0.42",
     "lodash": "^4.17.20",
     "mongoose": "^5.11.19",
-    "node-cron": "^2.0.3",
+    "node-cron": "^3.0.0",
     "nunjucks": "^3.2.3",
     "ts-node": "^9.1.1",
     "tsc": "^1.20150623.0",
