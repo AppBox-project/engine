@@ -84,10 +84,10 @@ anymatch@~3.1.1:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-appbox-formulas@^0.0.42:
-  version "0.0.42"
-  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.42.tgz#5ef311c3d4216fe3b33f6e1d2143fb15572c68b5"
-  integrity sha512-e3rwEvOgDRQU0MDSmWHlTfSY6ECqkaIQecF180DDFlKS8t3VkP6GLAtRB8Y88zuPDJvC0xqG3vWYgQlywb8xvw==
+appbox-formulas@^0.0.44:
+  version "0.0.44"
+  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.44.tgz#fe7806cb6e2d0ddeaf109a484f1009f670d81826"
+  integrity sha512-fRNMF3EvspmqCybhBVMYxVCYF+UT00f3pXzaT66QhqXRzFkVD6SyU8hbFSwh2r25iL0GrLLKtgFq6gcJjHFWqQ==
   dependencies:
     date-fns "^2.16.1"
     lodash "^4.17.20"
@@ -280,9 +280,9 @@ crypto-random-string@^2.0.0:
   integrity sha512-v1plID3y9r/lPhviJ1wrXpLeyUIGAZ2SHNYTEapm7/8A9nLPoyvVp3RK/EPFqn5kEznyWgYZNsRtYYIWbuG8KA==
 
 date-fns@^2.16.1:
-  version "2.16.1"
-  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.16.1.tgz#05775792c3f3331da812af253e1a935851d3834b"
-  integrity sha512-sAJVKx/FqrLYHAQeN7VpJrPhagZc9R4ImZIWYRFZaaohR3KzmuK88touwsSwSVT8Qcbd4zoDsnGfX4GFB4imyQ==
+  version "2.19.0"
+  resolved "https://registry.yarnpkg.com/date-fns/-/date-fns-2.19.0.tgz#65193348635a28d5d916c43ec7ce6fbd145059e1"
+  integrity sha512-X3bf2iTPgCAQp9wvjOQytnf5vO5rESYRXlPIVcgSbtT5OTScPcsf9eZU+B/YIkKAtYr5WeCii58BgATrNitlWg==
 
 debug@3.1.0:
   version "3.1.0"

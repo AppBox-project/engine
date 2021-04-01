@@ -10,8 +10,10 @@ export default class DatabaseModel {
   models: { model; stream; listeners: {} };
   objects: { model; stream; listeners: {} };
   attachments: { model; stream; listeners: {} };
+  db;
 
   constructor(db) {
+    this.db = db;
     this.models = {
       model: mongoose.model("Models"),
       stream: db.collection("models").watch(),

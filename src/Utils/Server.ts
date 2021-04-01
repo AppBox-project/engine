@@ -7,6 +7,7 @@ import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
 import Task from "../Tasks";
+import Action from "./Actions";
 var cron = require("node-cron");
 var mongoose = require("mongoose");
 
@@ -75,12 +76,24 @@ export default class Server {
       this.timeTriggers = {};
 
       // Perform all tasks
-      Promise.all([this.compileFormulas(), this.compileProcesses()]).then(
-        () => {
-          this.compileCronTriggers();
-          resolve();
-        }
-      );
+      Promise.all([this.compileFormulas()]).then(async () => {
+        await this.compileCronTriggers();
+
+        // Actions
+        const actions = await this.models.objects.model.find({
+          objectId: "actions",
+          "data.active": true,
+        });
+        actions.map((action) => {
+          action.data.data.triggers.time.map((timeTrigger) => {
+            cron.schedule(timeTrigger.cron, () => {
+              this.executeAction(action, this);
+            });
+          });
+        });
+
+        resolve();
+      });
     });
 
   // Compile formulas
@@ -205,58 +218,6 @@ export default class Server {
       }, 1000);
     });
 
-  // Compile processes
-  // --> Load all system-automations with type process and turn them into processes for engine
-  compileProcesses = () =>
-    new Promise<void>(async (resolve) => {
-      const processes = await this.models.objects.model.find({
-        objectId: "system-automations",
-        "data.type": "Process",
-        "data.active": true,
-      });
-
-      console.log(
-        `--> 👨‍💻 Compiling ${processes.length} ${
-          processes.length === 1 ? "process" : "processes"
-        }.`
-      );
-
-      await processes.reduce((prev, process) => {
-        console.log(`--> 👨‍💻 Compiling '${process.data.name}'.`);
-        const newProcess = new Process(process.data.name, this.models, this);
-        process.data.data.triggers.map((trigger) => {
-          switch (trigger.type) {
-            case "cron":
-              if (!this.timeTriggers[trigger.args.cron])
-                this.timeTriggers[trigger.args.cron] = [];
-              this.timeTriggers[trigger.args.cron].push(newProcess.id);
-              break;
-            default:
-              console.log(`Unknown trigger type ${trigger.type}`);
-              break;
-          }
-        });
-        process.data.data.steps.map((step) => {
-          const condition = new ProcessStepCondition(
-            step.condition.conditions[0].type, // Todo: multiple conditions need to be processed seperately
-            step.condition.conditions.actionIfTrue,
-            step.condition.conditions.actionIfFalse
-          );
-          const actions: ProcessStepAction[] = [];
-          step.actions.map((action) => {
-            actions.push(
-              new ProcessStepAction(action.type, action.args, action.name)
-            );
-          });
-          newProcess.addStep(new ProcessStep(condition, actions));
-        });
-        this.processes[newProcess.id] = newProcess;
-        return true;
-      }, processes[0]);
-
-      resolve();
-    });
-
   // Process update
   // This function is called every time an object is updated or created.
   // It checks the change to see if it triggers an automation. If so, it executes it.
@@ -265,7 +226,7 @@ export default class Server {
     const automationsToTrigger: Automation[] = [];
     map(this.automations, (automation: Automation, ak) => {
       map(automation.dependencies, (dependency, dk) => {
-        if (dependency.model === context.object.objectId) {
+        if (dependency?.model === context?.object?.objectId) {
           map(context.change, (updateValue, updateKey) => {
             if (
               dependency.field === "__ANY" || // Any field within this model triggers calculation
@@ -320,5 +281,10 @@ export default class Server {
         });
       });
     });
+  };
+
+  executeAction = (inputAction, server: Server) => {
+    console.log(`Executing action`, inputAction.data.name);
+    const action = new Action(inputAction.data, server).execute();
   };
 }
