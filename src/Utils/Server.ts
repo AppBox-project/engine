@@ -86,8 +86,7 @@ export default class Server {
         });
         actions.map((action) => {
           action.data.data.triggers.time.map((timeTrigger) => {
-            cron.schedule("* * * * *", () => {
-              /*timeTrigger.cron, () => {*/
+            cron.schedule(timeTrigger.cron, () => {
               this.executeAction(action, this);
             });
           });
