@@ -1,4 +1,4 @@
-import DatabaseModel from "./Classes/DatabaseModel";
+import DatabaseModel from "appbox-formulas/dist/Classes/DatabaseModel";
 import Automation from "./Automation";
 import { map } from "lodash";
 import { AutomationContext } from "appbox-formulas/dist/Types";
@@ -7,7 +7,7 @@ import { ProcessStep } from "./Process/ProcessStep";
 import { ProcessStepCondition } from "./Process/ProcessStepCondition";
 import { ProcessStepAction } from "./Process/ProcessStepAction";
 import Task from "../Tasks";
-import Action from "./Actions";
+import { Action } from "appbox-formulas";
 var cron = require("node-cron");
 var mongoose = require("mongoose");
 
@@ -45,6 +45,7 @@ export default class Server {
         that.models = new DatabaseModel(db);
 
         // React to tasks that target engines.
+
         that.models.objects.stream.on("change", (change) => {
           if (change.operationType === "insert") {
             if (change.fullDocument.objectId === "system-task") {
@@ -87,7 +88,7 @@ export default class Server {
         actions.map((action) => {
           action.data.data.triggers.time.map((timeTrigger) => {
             cron.schedule(timeTrigger.cron, () => {
-              this.executeAction(action, this);
+              this.executeAction(action, this.models);
             });
           });
         });
@@ -283,8 +284,8 @@ export default class Server {
     });
   };
 
-  executeAction = (inputAction, server: Server) => {
+  executeAction = (inputAction, models: DatabaseModel) => {
     console.log(`Executing action`, inputAction.data.name);
-    const action = new Action(inputAction.data, server).execute();
+    const action = new Action(inputAction.data, models).execute();
   };
 }

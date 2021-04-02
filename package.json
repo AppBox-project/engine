@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "appbox-formulas": "^0.0.44",
+    "appbox-formulas": "^0.0.45",
     "lodash": "^4.17.20",
     "mongoose": "^5.11.19",
     "node-cron": "^3.0.0",
