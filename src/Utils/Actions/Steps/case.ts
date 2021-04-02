@@ -15,7 +15,7 @@ export default (step: ActionStepType, actionInstance: ActionInstance) =>
           const varToCheck = actionInstance.vars[crit.var];
           if (typeof crit.val === "object") {
             crit.val.map((objCrit) => {
-              if (varToCheck.data !== objCrit.value) {
+              if (varToCheck.data[objCrit.key] !== objCrit.value) {
                 criteriaMet = false;
               }
             });
