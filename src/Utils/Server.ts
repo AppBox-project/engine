@@ -81,12 +81,13 @@ export default class Server {
         await this.compileCronTriggers();
 
         // Actions
-        const actions = await this.models.objects.model.find({
+        const actionList = await this.models.objects.model.find({
           objectId: "actions",
           "data.active": true,
         });
-        actions.map((action) => {
-          action.data.data.triggers.time.map((timeTrigger) => {
+
+        actionList.map((action) => {
+          (action?.data?.data?.triggers?.time || []).map((timeTrigger) => {
             cron.schedule(timeTrigger.cron, () => {
               this.executeAction(action, this.models);
             });
