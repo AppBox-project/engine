@@ -37,10 +37,10 @@
     "@types/mongodb" "*"
     "@types/node" "*"
 
-"@types/node@*", "@types/node@^14.14.33":
-  version "14.14.33"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.33.tgz#9e4f8c64345522e4e8ce77b334a8aaa64e2b6c78"
-  integrity sha512-oJqcTrgPUF29oUP8AsUqbXGJNuPutsetaa9kTQAQce5Lx5dTYWV02ScBiT/k1BX/Z7pKeqedmvp39Wu4zR7N7g==
+"@types/node@*", "@types/node@^14.14.37":
+  version "14.14.37"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.37.tgz#a3dd8da4eb84a996c36e331df98d82abd76b516e"
+  integrity sha512-XYmBiy+ohOR4Lh5jE379fV2IU+6Jn4g5qASinhitfyO71b/sCo6MKsMLF5tc7Zf2CE8hViVQyYSobJNke8OvUw==
 
 a-sync-waterfall@^1.0.0:
   version "1.0.1"
@@ -84,10 +84,10 @@ anymatch@~3.1.1:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-appbox-formulas@^0.0.44:
-  version "0.0.44"
-  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.44.tgz#fe7806cb6e2d0ddeaf109a484f1009f670d81826"
-  integrity sha512-fRNMF3EvspmqCybhBVMYxVCYF+UT00f3pXzaT66QhqXRzFkVD6SyU8hbFSwh2r25iL0GrLLKtgFq6gcJjHFWqQ==
+appbox-formulas@^0.0.47:
+  version "0.0.47"
+  resolved "https://registry.yarnpkg.com/appbox-formulas/-/appbox-formulas-0.0.47.tgz#294be94af7592be4d1448f725341dc94a89438c1"
+  integrity sha512-d3qt/AhQDVCKKhFZHKo3LO55x4axB3ucW2h3TH9bOEzVNU6PFBQ3fTwvQ08KPXgCHXJBLRZxh3mgOgPspThelw==
   dependencies:
     date-fns "^2.16.1"
     lodash "^4.17.20"
@@ -576,10 +576,10 @@ latest-version@^5.0.0:
   dependencies:
     package-json "^6.3.0"
 
-lodash@^4.17.20:
-  version "4.17.20"
-  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
-  integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
+lodash@^4.17.20, lodash@^4.17.21:
+  version "4.17.21"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
+  integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
 
 lowercase-keys@^1.0.0, lowercase-keys@^1.0.1:
   version "1.0.1"
